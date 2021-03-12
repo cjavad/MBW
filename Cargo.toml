@@ -1,5 +1,5 @@
 [package]
-name = "MBW"
+name = "mbw"
 version = "0.1.0"
 authors = ["Javad Asgari Shafique <javadshafique@hotmail.com>"]
 edition = "2018"
@@ -8,8 +8,7 @@ edition = "2018"
 
 [dependencies]
 rodio = "0.13.0"
-crossterm = "0.18"
-tui = { version = "0.14", default-features = false, features = ['crossterm'] }
+bracket-lib = "0.8.1"
 async-std = "1.7.0"
 serde = "1.0.124"
 bincode = "1.3.2"
