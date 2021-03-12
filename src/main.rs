@@ -1,5 +1,6 @@
 mod client;
 mod map;
+mod person;
 mod server;
 mod state;
 

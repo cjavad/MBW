@@ -1,6 +1,12 @@
 use bracket_lib::prelude::*;
 
 #[derive(Clone)]
+pub struct Position {
+    pub x: usize,
+    pub y: usize
+}
+
+#[derive(Clone)]
 pub enum Tile {
     Road,
 }

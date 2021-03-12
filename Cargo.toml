@@ -12,6 +12,7 @@ bracket-lib = "0.8.1"
 async-std = "1.7.0"
 serde = { version = "1.0.124", features = ["derive"] }
 bincode = "1.3.2"
+rand = "0.8.3"
 
 [features]
 default = ["client"]

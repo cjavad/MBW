@@ -43,11 +43,12 @@ KMG (Københavns Mediegymnasium) Game Jam Entry 2021
     * Vægtede smitterate
 - Arbejde
     * titel / arbejdsplads
+    * Arbejdstimer
     * Vægtede smitterate
     * Vægtede kontakttal
 - Vaner
     * Mundbind
-    * Hygiene (for ofte vasker de hænder)
+    * Hygiejne (for ofte vasker de hænder)
     * Bekendte (vennekreds / omgangskreds) | Kontakttal
 
 ## Spiller interaktion
