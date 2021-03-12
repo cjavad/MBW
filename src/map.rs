@@ -7,15 +7,25 @@ pub struct Position {
     pub y: usize,
 }
 
+impl Position {
+    pub const fn new(x: usize, y: usize) -> Self {
+        Self { x, y }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Tile {
-    Road,
+    Empty,
+    Building,
+    Door,
 }
 
 impl Tile {
     pub fn render(&self, point: &Point, ctx: &mut BTerm) {
         match self {
-            Tile::Road => ctx.print_color(point.x, point.y, BLACK, DARK_GREEN, "#"),
+            Tile::Empty => {}
+            Tile::Building => ctx.print_color(point.x, point.y, BROWN1, BLACK, "#"),
+            Tile::Door => ctx.print_color(point.x, point.y, DARK_BLUE, BLACK, "["),
         }
     }
 }
