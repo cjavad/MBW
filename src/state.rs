@@ -1,8 +1,4 @@
-mod client;
-mod map;
-mod server;
-mod state;
-
+use crate::map;
 use bracket_lib::prelude::*;
 
 pub struct State {
@@ -23,16 +19,4 @@ impl GameState for State {
 
         self.map.render(ctx);
     }
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
-    let ctx = BTermBuilder::simple(200, 100)?
-        .with_title("MBW")
-        .with_vsync(true)
-        .with_fps_cap(60.0)
-        .build()?;
-
-    let state = State::new();
-
-    main_loop(ctx, state)
 }
