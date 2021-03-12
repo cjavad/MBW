@@ -1,8 +1,8 @@
+use crate::map::Position;
 use rand::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::ops::Range;
-use serde::{Serialize, Deserialize};
-use crate::map::Position;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Job {

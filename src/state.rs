@@ -1,5 +1,7 @@
 use crate::map;
 use bracket_lib::prelude::*;
+use crate::map_generation;
+use crate::structures;
 
 pub struct State {
     pub map: map::Map,
@@ -7,8 +9,16 @@ pub struct State {
 
 impl State {
     pub fn new() -> Self {
+        let settings = map_generation::MapGenerationSettings {
+            width: 24,
+            height: 16,
+            structures: structures::STRUCTURES,
+        };
+
+        let mut rng = rand::thread_rng();
+
         Self {
-            map: map::Map::fill(200, 100, map::Tile::Road),
+            map: settings.generate(&mut rng),
         }
     }
 }
