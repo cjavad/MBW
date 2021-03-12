@@ -4,9 +4,9 @@ mod server;
 mod state;
 
 fn main() {
-    #[cfg(client)]
+    #[cfg(feature = "client")]
     client::run().unwrap();
 
-    #[cfg(server)]
+    #[cfg(feature = "server")]
     server::run();
 }
