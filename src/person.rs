@@ -17,6 +17,11 @@ pub enum Job {
     Student,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum PersonUpdate {
+    Position(PersonId, Position)
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PersonId(u32);
 
