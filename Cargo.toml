@@ -10,7 +10,11 @@ edition = "2018"
 rodio = "0.13.0"
 bracket-lib = "0.8.1"
 async-std = "1.7.0"
-serde = "1.0.124"
+serde = { version = "1.0.124", features = ["derive"] }
 bincode = "1.3.2"
 
 [features]
+default = ["client"]
+
+server = []
+client = []
