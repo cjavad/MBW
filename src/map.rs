@@ -1,10 +1,10 @@
 use bracket_lib::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Position {
     pub x: usize,
-    pub y: usize
+    pub y: usize,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
