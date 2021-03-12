@@ -1,12 +1,13 @@
 use bracket_lib::prelude::*;
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Position {
     pub x: usize,
     pub y: usize
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Tile {
     Road,
 }
@@ -19,6 +20,7 @@ impl Tile {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Map {
     pub width: usize,
     pub height: usize,

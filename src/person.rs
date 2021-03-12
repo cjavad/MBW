@@ -1,9 +1,10 @@
 use rand::prelude::*;
 use std::collections::HashSet;
 use std::ops::Range;
+use serde::{Serialize, Deserialize};
+use crate::map::Position;
 
-use crate::map::{Position, Tile};
-
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Job {
     Doctor,
     Programmer,
@@ -16,14 +17,17 @@ pub enum Job {
     Student,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PersonId(u32);
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonHabits {
     pub mask: f32,
     pub hygiene: f32,
     pub acquaintances: HashSet<PersonId>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Person {
     pub age: u8,
     pub sex: bool,
