@@ -96,6 +96,7 @@ impl GameState for State {
             ui.rect(25, 30, |ui| {
                 ui.print("Person: ");
                 ui.add_offset(Point::new(1, 1));
+                ui.print(format!("Name: {} {}", person.first_name, person.last_name));
                 ui.print(format!("Alive: {}", person.alive));
                 ui.print(format!("Age: {}", person.age));
                 ui.print(format!("Job: {}", person.job.ty.as_str()));
