@@ -2,10 +2,10 @@ use crate::person::PersonUpdate;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tokio::time::sleep;
 use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::time::sleep;
 
 pub struct ServerState {
     pub tick_count: u64,

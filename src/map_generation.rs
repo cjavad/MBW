@@ -41,21 +41,27 @@ impl<'a> MapGenerationSettings<'a> {
     pub fn generate(&self, rng: &mut impl Rng) -> map::Map {
         let mut chunks: Vec<Vec<Option<&Chunk>>> = vec![vec![None; self.height]; self.width];
 
-        let mut times_tried = 0;
+        // because hardcoding is okay if behind atleast 2 levels of indirection
+        const MAX_TRIES: u32 = 10;
 
+        // try to place buildings, if 10 tries don't do, then nothing will
+        let mut times_tried = 0;
         loop {
             let structure = self.structures.choose(rng).unwrap();
             let (width, height) = structure.dimensions();
 
+            // generate position to try placing
             let x = rng.gen_range(0..=self.width - width);
             let y = rng.gen_range(0..=self.height - height);
 
+            // check if place is available
             let can_place: bool = structure
                 .chunks
                 .iter()
                 .map(|(p, _)| chunks[x + p.x][y + p.y].is_none())
                 .fold(true, |a, b| a && b);
 
+            // if can place, then do so
             if can_place {
                 for (p, chunk) in structure.chunks {
                     chunks[x + p.x][y + p.y] = Some(chunk);
@@ -65,7 +71,7 @@ impl<'a> MapGenerationSettings<'a> {
             } else {
                 times_tried += 1;
 
-                if times_tried >= 10 {
+                if times_tried >= MAX_TRIES {
                     break;
                 }
             }
@@ -73,6 +79,7 @@ impl<'a> MapGenerationSettings<'a> {
 
         let mut map = map::Map::fill(self.width * 6, self.height * 6, map::Tile::Empty);
 
+        // replace tiles with the generated ones
         for column in 0..self.width {
             for row in 0..self.height {
                 if let Some(chunk) = chunks[column][row] {

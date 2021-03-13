@@ -46,10 +46,10 @@ impl Map {
         }
     }
 
-    pub fn render(&self, ctx: &mut BTerm) {
+    pub fn render(&self, ctx: &mut BTerm, offset: Point) {
         for x in 0..self.width {
             for y in 0..self.height {
-                let point = Point::new(x, y);
+                let point = Point::new(x, y) + offset;
                 self.tiles[x][y].render(&point, ctx);
             }
         }
