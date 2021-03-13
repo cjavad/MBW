@@ -141,7 +141,8 @@ impl World {
         for (location, persons) in person_locations {
             match persons.len() {
                 1 => ctx.print_color(location.x, location.y, LIGHT_BLUE, BLACK, "&"),
-                _ => {}
+                n if n <= 9 => ctx.print_color(location.x, location.y, LIGHT_BLUE, BLACK, n),
+                _ => ctx.print_color(location.x, location.y, LIGHT_BLUE, BLACK, "9+"),
             }
         }
     }
