@@ -116,7 +116,10 @@ impl Person {
             sick: false,
             first_name: FIRST_NAMES.choose(rng).unwrap().to_string(),
             last_name: LAST_NAMES.choose(rng).unwrap().to_string(),
-            age: rng.gen_range(18..100),
+            age: match rng.gen_range(0.0..1.0) {
+                n if n > 0.2 => rng.gen_range(18..40),
+                _ => rng.gen_range(40..80)
+            },
             sex: rng.gen_bool(0.5),
             job,
             position: home.clone(),
