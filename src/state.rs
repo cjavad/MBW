@@ -74,7 +74,8 @@ impl GameState for State {
 
         self.handle_payloads();
         self.update_person_locations();
-        self.world.render(ctx, &self.person_locations, Point::new(0, 0));
+        self.world
+            .render(ctx, &self.person_locations, Point::new(0, 0));
 
         let mut ui = Ui::new(ctx, self.width as i32, self.height as i32);
 

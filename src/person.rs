@@ -1,4 +1,5 @@
 use crate::map::{Map, Position};
+use crate::names::{FIRST_NAMES, LAST_NAMES};
 use crate::server::{GameSession, PathCache};
 use crate::world::World;
 use bracket_lib::prelude::*;
@@ -53,6 +54,8 @@ pub struct PersonHabits {
 pub struct Person {
     pub alive: bool,
     pub sick: bool,
+    pub first_name: String,
+    pub last_name: String,
     pub age: u8,
     pub sex: bool,
     pub job: Job,
@@ -111,6 +114,8 @@ impl Person {
         Person {
             alive: true,
             sick: false,
+            first_name: FIRST_NAMES.choose(rng).unwrap().to_string(),
+            last_name: LAST_NAMES.choose(rng).unwrap().to_string(),
             age: rng.gen_range(18..100),
             sex: rng.gen_bool(0.5),
             job,
@@ -127,10 +132,6 @@ impl Person {
 
     pub fn add_acquaintance(&mut self, id: PersonId) {
         self.habits.acquaintances.insert(id);
-    }
-
-    pub fn render(&self, ctx: &mut BTerm) {
-        ctx.print_color(self.position.x, self.position.y, LIGHT_BLUE, BLACK, "&");
     }
 
     pub fn update_action(
