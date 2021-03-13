@@ -1,10 +1,8 @@
 use crate::client::ClientNetworkHandle;
 use crate::map::Position;
-use crate::map_generation;
 use crate::person::{PersonId, PersonUpdate};
 use crate::server::WorldUpdate;
-use crate::structures;
-use crate::ui::Ui;
+use crate::ui::{DrawContext, DrawUi, Rect, Ui};
 use crate::world::World;
 use bracket_lib::prelude::*;
 use std::collections::HashMap;
@@ -80,25 +78,33 @@ impl GameState for State {
         self.world
             .render(ctx, &self.person_locations, Point::new(0, 0));
 
-        let mut ui = Ui::new(ctx, self.width as i32, self.height as i32);
+        let mut ui = Ui::new(
+            ctx,
+            Rect {
+                position: Point::new(0, 0),
+                width: self.width as i32,
+                height: self.height as i32,
+            },
+        );
 
-        if ui.left_click {
+        if ui.mouse_click && self.selected_person.is_none() {
             if let Some(persons) = self.person_locations.get(&Position::new(
-                ui.ctx.mouse_point().x as usize,
-                ui.ctx.mouse_point().y as usize,
+                ctx.mouse_point().x as usize,
+                ctx.mouse_point().y as usize,
             )) {
                 self.selected_person = Some(persons[0].clone());
-            } else {
-                self.selected_person = None;
             }
         }
 
-        if let Some(id) = &self.selected_person {
+        let selected_person = &mut self.selected_person;
+        let world = &self.world;
+
+        if let Some(id) = selected_person {
             let person = self.world.people.get(id).unwrap();
 
             ui.rect(25, 30, |ui| {
                 ui.print("Person: ");
-                ui.add_offset(Point::new(1, 1));
+                ui.offset(Point::new(1, 1));
                 ui.print(format!("Name: {} {}", person.first_name, person.last_name));
                 ui.print(format!("Alive: {}", person.alive));
                 ui.print(format!("Age: {}", person.age));
@@ -112,12 +118,31 @@ impl GameState for State {
                 ));
                 ui.print(format!(""));
 
-                ui.add_offset(Point::new(0, 1));
-
                 if person.infected {
+                    ui.offset(Point::new(0, 1));
                     ui.print("INFECTED!!!");
+                }
+
+                ui.offset(Point::new(0, 1));
+                ui.print("Acquaintances");
+
+                for aq in &person.habits.acquaintances {
+                    ui.text(
+                        format!(
+                            "{} {}",
+                            world.people[aq].first_name, world.people[aq].last_name
+                        ),
+                        |ui| {
+                            if ui.clicked() {
+                                *id = aq.clone();
+                            }
+                        },
+                    );
                 }
             });
         }
+
+        let mut ctx = DrawContext { bterm: ctx };
+        ui.draw(&mut ctx);
     }
 }
