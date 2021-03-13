@@ -10,20 +10,19 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::sleep;
 
-pub struct GameSession {
-    pub player1: PlayerSession,
-    pub player2: PlayerSession,
-    pub tick_count: u64,
-    pub tick_rate: u8,
-    pub age: u64,
-    pub world: World,
-    pub people_actions: HashMap<PersonId, PersonAction>,
-    pub paths: HashMap<(Position, Position), Vec<Position>>,
+pub struct PathCache {
+    paths: HashMap<(Position, Position), Vec<Position>>,
 }
 
-impl GameSession {
+impl PathCache {
+    pub fn new() -> Self {
+        Self {
+            paths: HashMap::new(),
+        }
+    }
+
     /// Finds a path between points and chaches the result in `paths`.
-    pub fn cache_path(&mut self, start: Position, end: Position) {
+    pub fn cache_path(&mut self, map: &Map, start: Position, end: Position) {
         let (path, _cost) = pathfinding::prelude::astar(
             &start,
             |p| {
@@ -33,19 +32,19 @@ impl GameSession {
                 let right = Position::new(p.x + 1, p.y);
                 let left = Position::new(p.x.saturating_sub(1), p.y);
 
-                if self.world.map.is_empty(&up) {
+                if map.can_walk(&up) {
                     neighbors.push((up, 1));
                 }
 
-                if self.world.map.is_empty(&down) {
+                if map.can_walk(&down) {
                     neighbors.push((down, 1));
                 }
 
-                if self.world.map.is_empty(&right) {
+                if map.can_walk(&right) {
                     neighbors.push((right, 1));
                 }
 
-                if self.world.map.is_empty(&left) {
+                if map.can_walk(&left) {
                     neighbors.push((left, 1));
                 }
 
@@ -59,16 +58,29 @@ impl GameSession {
         self.paths.insert((start, end), path);
     }
 
-    pub fn get_path(&mut self, start: Position, end: Position) -> &Vec<Position> {
+    pub fn get_path(&mut self, map: &Map, start: Position, end: Position) -> &Vec<Position> {
         let key = (start, end);
 
         if !self.paths.contains_key(&key) {
-            self.cache_path(key.0.clone(), key.1.clone());
+            self.cache_path(map, key.0.clone(), key.1.clone());
         }
 
         self.paths.get(&key).unwrap()
     }
+}
 
+pub struct GameSession {
+    pub player1: PlayerSession,
+    pub player2: PlayerSession,
+    pub tick_count: u64,
+    pub tick_rate: u8,
+    pub age: u64,
+    pub world: World,
+    pub people_actions: HashMap<PersonId, PersonAction>,
+    pub path_cache: PathCache,
+}
+
+impl GameSession {
     pub async fn send_playload(
         &mut self,
         updates: Vec<WorldUpdate>,
@@ -88,9 +100,18 @@ impl GameSession {
     }
 
     pub fn update(&mut self) -> Vec<WorldUpdate> {
+        self.world.set_time(self.age);
+
         let mut updates = Vec::new();
 
+        for (id, person) in &self.world.people {
+            let action = self.people_actions.get_mut(id).unwrap();
+            
+            person.update_action(&self.world, &mut self.path_cache, action);
+        }
+
         for (id, person) in &mut self.world.people {
+            
             let action = self.people_actions.get_mut(id).unwrap();
 
             match person.update(id.clone(), action) {
@@ -181,7 +202,7 @@ async fn server_run_game(
         age: 0,
         world,
         people_actions,
-        paths: HashMap::new(),
+        path_cache: PathCache::new(),
     };
 
     println!("{}", state.player1.socket.peer_addr().unwrap());

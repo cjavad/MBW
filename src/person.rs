@@ -1,4 +1,6 @@
-use crate::map::Position;
+use crate::map::{Position, Map};
+use crate::server::{GameSession, PathCache};
+use crate::world::World;
 use bracket_lib::prelude::*;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -29,7 +31,7 @@ pub struct PersonId(pub u32);
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PersonAction {
     Working,
-    Walking(Vec<Position>),
+    Walking(Vec<Position>, Box<PersonAction>),
     AtHome,
 }
 
@@ -46,7 +48,8 @@ pub struct Person {
     pub sick: bool,
     pub age: u8,
     pub sex: bool,
-    pub job: Job,
+    pub job_type: Job,
+    pub job_location: Option<Position>,
     pub position: Position,
     pub home: Position,
     pub habits: PersonHabits,
@@ -98,13 +101,19 @@ impl Job {
 }
 
 impl Person {
-    pub fn generate(rng: &mut impl Rng, home: Position) -> Self {
+    pub fn generate(
+        rng: &mut impl Rng,
+        home: Position,
+        job_type: Job,
+        job_location: Option<Position>,
+    ) -> Self {
         Person {
             alive: true,
             sick: false,
             age: rng.gen_range(0..100),
             sex: rng.gen_bool(0.5),
-            job: Job::generate(rng),
+            job_type: Job::generate(rng),
+            job_location,
             position: home.clone(),
             home,
             habits: PersonHabits {
@@ -123,10 +132,38 @@ impl Person {
         ctx.print_color(self.position.x, self.position.y, LIGHT_BLUE, BLACK, "&");
     }
 
+    pub fn update_action(
+        &self,
+        world: &World,
+        path_cache: &mut PathCache,
+        action: &mut PersonAction,
+    ) {
+        match action {
+            PersonAction::AtHome => {
+                let work_hours = self.job_type.work_hours();
+
+                if let Some(job_location) = &self.job_location {
+                    if world.hours >= work_hours.start && world.hours <= work_hours.end
+                    {
+                        let path = path_cache.get_path(&world.map, self.home.clone(), job_location.clone());
+
+                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::Working));
+                    }
+                }
+            }
+            PersonAction::Walking(path, next) => {
+                if path.len() == 0 {
+                    *action = (**next).clone();
+                }
+            }
+            _ => {},
+        }
+    }
+
     pub fn update(&mut self, id: PersonId, action: &mut PersonAction) -> Option<PersonUpdate> {
         match action {
             PersonAction::AtHome => None,
-            PersonAction::Walking(path) => {
+            PersonAction::Walking(path, _) => {
                 self.position = path.pop().unwrap();
 
                 Some(PersonUpdate::Position(id, self.position.clone()))
