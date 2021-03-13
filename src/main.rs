@@ -5,6 +5,7 @@ mod person;
 mod server;
 mod state;
 mod structures;
+mod world;
 
 fn main() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     #[cfg(not(feature = "server"))]

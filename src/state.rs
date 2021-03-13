@@ -1,10 +1,10 @@
-use crate::map;
+use crate::world;
 use crate::map_generation;
 use crate::structures;
 use bracket_lib::prelude::*;
 
 pub struct State {
-    pub map: map::Map,
+    pub world: world::World,
 }
 
 impl State {
@@ -18,7 +18,7 @@ impl State {
         let mut rng = rand::thread_rng();
 
         Self {
-            map: settings.generate(&mut rng),
+            world: world::World::generate(settings, &mut rng),
         }
     }
 }
@@ -27,6 +27,6 @@ impl GameState for State {
     fn tick(&mut self, ctx: &mut BTerm) {
         ctx.cls_bg(BLACK);
 
-        self.map.render(ctx, Point::new(0, 0));
+        self.world.render(ctx, Point::new(0, 0));
     }
 }
