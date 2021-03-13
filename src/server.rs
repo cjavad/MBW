@@ -24,7 +24,7 @@ impl PathCache {
     /// Finds a path between points and chaches the result in `paths`.
     pub fn cache_path(&mut self, map: &Map, start: Position, end: Position) {
         let (path, _cost) = pathfinding::prelude::astar(
-            &start,
+            &end,
             |p| {
                 let mut neighbors = Vec::new();
                 let up = Position::new(p.x, p.y.saturating_sub(1));
@@ -51,10 +51,12 @@ impl PathCache {
                 neighbors
             },
             |_| 1,
-            |p| *p == end,
+            |p| *p == start,
         )
         .unwrap();
 
+        // hehe xD, shiz fucked, but works better than the alternative
+        // double reversed order
         self.paths.insert((start, end), path);
     }
 
@@ -184,7 +186,7 @@ async fn server_run_game(
         structures: crate::structures::STRUCTURES,
     };
 
-    let world = World::generate(setting, &mut rand::rngs::StdRng::from_seed([132; 32]));
+    let world = World::generate(setting, &mut rand::thread_rng());//rngs::StdRng::from_seed([132; 32]));
 
     let people_actions = world
         .people
@@ -196,7 +198,7 @@ async fn server_run_game(
     let mut state = GameSession {
         player1,
         player2,
-        tick_count: 0,
+        tick_count: 600,
         tick_rate: 20,
         age: 0,
         world,
