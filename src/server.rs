@@ -69,7 +69,7 @@ async fn server_run_game(
         player2,
         tick_count: 0,
         tick_rate: 20,
-        age: 0
+        age: 0,
     };
 
     loop {

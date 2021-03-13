@@ -1,15 +1,15 @@
-use crate::state;
-use tokio::net::TcpStream;
-use tokio::io::Interest;
-use tokio::io::{AsyncReadExt};
-use std::error::Error;
 use crate::server::NetworkPayload;
-use std::io;
-use std::sync::mpsc::{Sender, Receiver, channel};
+use crate::state;
 use bracket_lib::prelude::*;
+use std::error::Error;
+use std::io;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use tokio::io::AsyncReadExt;
+use tokio::io::Interest;
+use tokio::net::TcpStream;
 
 pub struct ClientNetworkHandle {
-    receiver: Receiver<NetworkPayload>
+    receiver: Receiver<NetworkPayload>,
 }
 
 impl ClientNetworkHandle {
@@ -18,12 +18,16 @@ impl ClientNetworkHandle {
     }
 }
 
-async fn client_main(sender: Sender<NetworkPayload>) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
+async fn client_main(
+    sender: Sender<NetworkPayload>,
+) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // Connect to host
     let mut stream = TcpStream::connect("127.0.0.1:35565").await?;
 
     loop {
-        let ready = stream.ready(Interest::READABLE | Interest::WRITABLE).await?;
+        let ready = stream
+            .ready(Interest::READABLE | Interest::WRITABLE)
+            .await?;
 
         if ready.is_readable() {
             let mut header = [0; 4];
@@ -47,7 +51,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sy
 
     let (sender, receiver) = channel();
     let handle = ClientNetworkHandle { receiver };
-    
+
     // Connect to server
     tokio::spawn(client_main(sender));
 
