@@ -5,6 +5,7 @@ use crate::world::World;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::Interest;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -12,7 +13,6 @@ use tokio::net::{
     tcp::{OwnedReadHalf, OwnedWriteHalf},
     TcpListener, TcpStream,
 };
-use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 
 pub struct PathCache {
@@ -90,7 +90,7 @@ pub struct GameSession {
     pub world: World,
     pub people_actions: HashMap<PersonId, PersonAction>,
     pub path_cache: PathCache,
-    pub receiver: mpsc::Receiver<PlayerUpdate>,
+    pub receiver: Receiver<PlayerUpdate>,
 }
 
 impl GameSession {
@@ -111,10 +111,11 @@ impl GameSession {
         Ok(())
     }
 
-    pub fn update(&mut self) -> Vec<WorldUpdate> {
-        let mut rng = rand::thread_rng();
+    pub async fn update(&mut self, rng: &mut impl Rng) -> Vec<WorldUpdate> {
         self.world.set_time(self.age);
-        
+
+        self.handle_players().await;
+
         let mut updates = Vec::new();
         let mut person_locations: HashMap<Position, Vec<PersonId>> = HashMap::new();
 
@@ -204,10 +205,9 @@ impl GameSession {
     }
 
     pub async fn handle_players(&mut self) {
-        while let Some(update) = self.receiver.recv().await {
-            // TODO: Handle player updates accordingly
+        self.receiver.try_iter().for_each(|update| {
             println!("{:?}", update);
-        }
+        });
     }
 }
 
@@ -269,7 +269,7 @@ pub struct PlayerUpdate {
 }
 
 async fn server_listener(
-    sender: mpsc::Sender<PlayerUpdate>,
+    sender: Sender<PlayerUpdate>,
     mut read: OwnedReadHalf,
 ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     loop {
@@ -279,14 +279,14 @@ async fn server_listener(
         read.read_exact(&mut data).await?;
         let payload = bincode::deserialize(&data).unwrap();
 
-        sender.send(payload).await?;
+        sender.send(payload).unwrap();
     }
 }
 
 async fn server_run_game(
     player1: TcpStream,
     player2: TcpStream,
-) -> Result<(PlayerSession, PlayerSession), Box<dyn std::error::Error + 'static + Send + Sync>> {
+) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     let setting = MapGenerationSettings {
         width: 24,
         height: 16,
@@ -315,7 +315,7 @@ async fn server_run_game(
     let player2 = PlayerSession::create_player(player2_write, !side);
 
     // Game logic
-    let (sender, receiver) = mpsc::channel::<PlayerUpdate>(100);
+    let (sender, receiver) = channel();
     tokio::spawn(server_listener(sender.clone(), player1_read));
     tokio::spawn(server_listener(sender, player2_read));
 
@@ -342,7 +342,7 @@ async fn server_run_game(
         session.tick_count = session.tick_count + 1;
         session.age = session.tick_count / session.tick_rate as u64;
 
-        let updates = session.update();
+        let updates = session.update(&mut rng).await;
         session.send_playload(updates).await?;
     }
 
