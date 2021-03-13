@@ -53,7 +53,36 @@ KMG (Københavns Mediegymnasium) Game Jam Entry 2021
 
 ## Spiller interaktion
 
-- WIP
+2 overordnet typer af interaktion:
+
+1. Tile based
+    - Placere tiles
+2. AoE based
+    - Giver en effekt (fra en tile)
+
+### Player 1: virus ability idéer
+
+Party Impulses: lav en fest der trækker tilfældige npcer hen til et område
+
+Antivax campaign: folk der går forbi et bestemt område vil nægte at blive vaccineret
+
+Roadblock: Blokere paths
+
+Social impulses: mennesker samles i dette område efter arbejde
+
+Økonomisk crash: Folk går ikke på arbejde 
+
+### Player 2: læge something player
+
+Testcenter: Npcer der går forbi et område vil blive testet, positive tilfælde vil blive hjemme i noget tid.
+
+Nedlukning: stop procentdel af npcer fra at bevæge sig ud fra deres hjem
+
+Lokal nedlukning: Bloker npcer fra at gå igennem et område, 
+
+Vaccinecenter: Gør npcer immune overfor infektion, har lav radius/duration
+
+Maskekampagne: Får folk i et område til bruge masker i noget tid.
 
 ## Tortillia Protokolen
 

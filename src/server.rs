@@ -6,8 +6,10 @@ use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::io::Interest;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 
 pub struct PathCache {
@@ -85,6 +87,7 @@ pub struct GameSession {
     pub world: World,
     pub people_actions: HashMap<PersonId, PersonAction>,
     pub path_cache: PathCache,
+    pub sender: mpsc::Sender<PlayerUpdate>,
 }
 
 impl GameSession {
@@ -196,6 +199,26 @@ impl GameSession {
 
         updates
     }
+
+    pub async fn listen_players(
+        &mut self,
+    ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
+        let mut header = [0; 4];
+        self.player1.socket.read_exact(&mut header).await?;
+        let mut data = vec![0; u32::from_be_bytes(header) as usize];
+        self.player1.socket.read_exact(&mut data).await?;
+        let payload: PlayerUpdate = bincode::deserialize(&data).unwrap();
+        self.sender.send(payload).await?;
+
+        let mut header = [0; 4];
+        self.player2.socket.read_exact(&mut header).await?;
+        let mut data = vec![0; u32::from_be_bytes(header) as usize];
+        self.player2.socket.read_exact(&mut data).await?;
+        let payload: PlayerUpdate = bincode::deserialize(&data).unwrap();
+        self.sender.send(payload).await?;
+
+        Ok(())
+    }
 }
 
 pub struct PlayerSession {
@@ -235,17 +258,30 @@ pub struct NetworkPayload {
 }
 
 impl NetworkPayload {
-    pub fn create(state: &GameSession, updates: Vec<WorldUpdate>) -> Self {
+    pub fn create(session: &GameSession, updates: Vec<WorldUpdate>) -> Self {
         NetworkPayload {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-            tick_count: state.tick_count,
-            age: state.age,
-            tick_rate: state.tick_rate,
+            tick_count: session.tick_count,
+            age: session.age,
+            tick_rate: session.tick_rate,
             updates: updates,
         }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PlayerUpdate {
+    // TODO: Define player updates
+    pub tick_count: u64,
+}
+
+async fn handle_player_updates(mut receiver: mpsc::Receiver<PlayerUpdate>) {
+    while let Some(update) = receiver.recv().await {
+        // TODO: Handle player updates accordingly
+        println!("{:?}", update);
     }
 }
 
@@ -268,7 +304,10 @@ async fn server_run_game(
         .collect();
 
     // Game logic
-    let mut state = GameSession {
+    let (sender, mut receiver) = mpsc::channel::<PlayerUpdate>(100);
+    tokio::spawn(handle_player_updates(receiver));
+
+    let mut session = GameSession {
         player1,
         player2,
         tick_count: 600,
@@ -277,23 +316,23 @@ async fn server_run_game(
         world,
         people_actions,
         path_cache: PathCache::new(),
+        sender,
     };
 
-    println!("{}", state.player1.socket.peer_addr().unwrap());
-
-    state
-        .send_playload(vec![WorldUpdate::SetWorld(state.world.clone())])
+    session
+        .send_playload(vec![WorldUpdate::SetWorld(session.world.clone())])
         .await?;
 
     loop {
         // Wait a tick before executing the next loop
-        sleep(Duration::from_millis(1000 / state.tick_rate as u64)).await;
+        sleep(Duration::from_millis(1000 / session.tick_rate as u64)).await;
         // Count a tick
-        state.tick_count = state.tick_count + 1;
-        state.age = state.tick_count / state.tick_rate as u64;
+        session.tick_count = session.tick_count + 1;
+        session.age = session.tick_count / session.tick_rate as u64;
 
-        let updates = state.update();
-        state.send_playload(updates).await?;
+        let updates = session.update();
+        session.send_playload(updates).await?;
+        session.listen_players().await?
     }
 
     //Ok((player1, player2))

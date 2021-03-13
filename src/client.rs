@@ -1,11 +1,11 @@
-use crate::server::NetworkPayload;
+use crate::server::{NetworkPayload, PlayerUpdate};
 use crate::state;
 use bracket_lib::prelude::*;
 use std::error::Error;
 use std::io;
 use std::sync::mpsc::{channel, Receiver, Sender};
-use tokio::io::AsyncReadExt;
 use tokio::io::Interest;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
 pub struct ClientNetworkHandle {
@@ -18,9 +18,14 @@ impl ClientNetworkHandle {
     }
 }
 
+pub struct PlayerUpdateHandle {
+    sender: Sender<PlayerUpdate>,
+}
+
 async fn client_main(
     ip: String,
     sender: Sender<NetworkPayload>,
+    receiver: Receiver<PlayerUpdate>,
 ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // Connect to host
     let mut stream = TcpStream::connect(ip).await?;
@@ -38,6 +43,16 @@ async fn client_main(
             let payload: NetworkPayload = bincode::deserialize(&data).unwrap();
             sender.send(payload).unwrap();
         }
+
+        if ready.is_writable() {
+            let collected: Vec<PlayerUpdate> = receiver.try_iter().collect();
+            for update in collected {
+                let serialized_payload = bincode::serialize(&update).unwrap();
+                let payload_size = (serialized_payload.len() as u32).to_be_bytes();
+                stream.write_all(&payload_size).await?;
+                stream.write_all(&serialized_payload).await?;
+            }
+        }
     }
 }
 
@@ -50,14 +65,26 @@ pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static +
         .with_fps_cap(60.0)
         .build()?;
 
-    let (sender, receiver) = channel();
-    let handle = ClientNetworkHandle { receiver };
+    // Client network queue for server tick updates
+    let (client_sender, client_receiver) = channel();
+    let client_handle = ClientNetworkHandle {
+        receiver: client_receiver,
+    };
+    // Player network queue for player action updates
+    let (player_sender, player_receiver) = channel();
+    let player_handle = PlayerUpdateHandle {
+        sender: player_sender,
+    };
 
     // Connect to server
-    tokio::spawn(client_main(ip, sender));
+    tokio::spawn(client_main(ip, client_sender, player_receiver));
 
     // init game state
-    let state = state::State::new(handle);
+    let state = state::State::new(client_handle);
+    player_handle
+        .sender
+        .send(PlayerUpdate { tick_count: 0 })
+        .unwrap();
 
     // run main loop
     main_loop(ctx, state)
