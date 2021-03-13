@@ -78,7 +78,7 @@ impl World {
             .collect::<HashMap<_, _>>();
 
         // generate people with random homes
-        let mut people: HashMap<person::PersonId, person::Person> = (0..200)
+        let mut people: HashMap<person::PersonId, person::Person> = (0..1)
             .into_iter()
             .map(|id| {
                 let home = homes.keys().choose(rng).unwrap().clone();
@@ -119,7 +119,7 @@ impl World {
     }
 
     pub fn set_time(&mut self, age: u64) {
-        const MINUTES_PER_AGE: u32 = 20;
+        const MINUTES_PER_AGE: u32 = 10;
 
         self.minutes = age as u32 * MINUTES_PER_AGE;
 
