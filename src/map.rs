@@ -1,7 +1,7 @@
 use bracket_lib::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Position {
     pub x: usize,
     pub y: usize,
@@ -52,6 +52,21 @@ impl Map {
                 let point = Point::new(x, y) + offset;
                 self.tiles[x][y].render(&point, ctx);
             }
+        }
+    }
+
+    pub fn in_bounds(&self, position: &Position) -> bool {
+        position.x < self.width && position.y < self.height
+    }
+
+    pub fn is_empty(&self, position: &Position) -> bool {
+        if self.in_bounds(position) {
+            match self.tiles[position.x][position.y] {
+                Tile::Empty => true,
+                _ => false,
+            }
+        } else {
+            false
         }
     }
 }

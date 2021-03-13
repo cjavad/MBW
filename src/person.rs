@@ -1,10 +1,11 @@
 use crate::map::Position;
+use bracket_lib::prelude::*;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::ops::Range;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Job {
     Doctor,
     Programmer,
@@ -23,7 +24,7 @@ pub enum PersonUpdate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct PersonId(u32);
+pub struct PersonId(pub u32);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonHabits {
@@ -37,6 +38,7 @@ pub struct Person {
     pub age: u8,
     pub sex: bool,
     pub job: Job,
+    pub position: Position,
     pub home: Position,
     pub habits: PersonHabits,
 }
@@ -87,12 +89,13 @@ impl Job {
 }
 
 impl Person {
-    pub fn generate(rng: &mut impl Rng, homes: &Vec<Position>) -> Self {
+    pub fn generate(rng: &mut impl Rng, home: Position) -> Self {
         Person {
             age: rng.gen_range(0..100),
             sex: rng.gen_bool(0.5),
             job: Job::generate(rng),
-            home: homes.choose(rng).unwrap().clone(),
+            position: home.clone(),
+            home,
             habits: PersonHabits {
                 mask: rng.gen_range(0.0..1.0),
                 hygiene: rng.gen_range(0.0..1.0),
@@ -103,5 +106,9 @@ impl Person {
 
     pub fn add_acquaintance(&mut self, id: PersonId) {
         self.habits.acquaintances.insert(id);
+    }
+
+    pub fn render(&self, ctx: &mut BTerm) {
+        ctx.print_color(self.position.x, self.position.y, LIGHT_BLUE, BLACK, "&");
     }
 }
