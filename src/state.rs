@@ -31,7 +31,10 @@ impl State {
         for payload in self.handle.get_payloads() {
             self.world.set_time(payload.age);
 
-            println!("days: {}, hours: {}, min: {}", self.world.days, self.world.hours, self.world.minutes);
+            println!(
+                "days: {}, hours: {}, min: {}",
+                self.world.days, self.world.hours, self.world.minutes
+            );
 
             // TODO: networking stuff with time and stuff
 

@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::ops::Range;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum Job {
+pub enum JobType {
     Doctor,
     Programmer,
     Clerk,
@@ -18,6 +18,12 @@ pub enum Job {
     Chef,
     Teacher,
     Student,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Job {
+    pub ty: JobType,
+    pub location: Option<Position>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -49,72 +55,51 @@ pub struct Person {
     pub sick: bool,
     pub age: u8,
     pub sex: bool,
-    pub job_type: Job,
-    pub job_location: Option<Position>,
+    pub job: Job,
     pub position: Position,
     pub home: Position,
     pub habits: PersonHabits,
 }
 
-impl Job {
-    pub fn infection_rate(&self) -> f32 {
-        match self {
-            Job::Doctor => 0.5,
-            Job::Programmer => 0.5,
-            Job::Clerk => 0.5,
-            Job::PoliceOfficer => 0.5,
-            Job::FireFighter => 0.5,
-            Job::PublicServant => 0.5,
-            Job::Chef => 0.1,
-            Job::Teacher => 0.8,
-            Job::Student => 0.0,
-        }
-    }
-
+impl JobType {
     pub fn work_hours(&self) -> Range<u8> {
         match self {
-            Job::Doctor => 9..17,
-            Job::Programmer => 12..22,
-            Job::Clerk => 7..18,
-            Job::PoliceOfficer => 6..16,
-            Job::FireFighter => 11..21,
-            Job::PublicServant => 11..23,
-            Job::Chef => 14..23,
-            Job::Teacher => 8..17,
-            Job::Student => 8..16,
+            JobType::Doctor => 9..17,
+            JobType::Programmer => 12..22,
+            JobType::Clerk => 7..18,
+            JobType::PoliceOfficer => 6..16,
+            JobType::FireFighter => 11..21,
+            JobType::PublicServant => 11..23,
+            JobType::Chef => 14..23,
+            JobType::Teacher => 8..17,
+            JobType::Student => 8..16,
         }
     }
 
     pub fn generate(rng: &mut impl Rng) -> Self {
         match rng.gen_range(0..9) {
-            0 => Job::Doctor,
-            1 => Job::Programmer,
-            2 => Job::Clerk,
-            3 => Job::PoliceOfficer,
-            4 => Job::FireFighter,
-            5 => Job::PublicServant,
-            6 => Job::Chef,
-            7 => Job::Teacher,
-            8 => Job::Student,
+            0 => JobType::Doctor,
+            1 => JobType::Programmer,
+            2 => JobType::Clerk,
+            3 => JobType::PoliceOfficer,
+            4 => JobType::FireFighter,
+            5 => JobType::PublicServant,
+            6 => JobType::Chef,
+            7 => JobType::Teacher,
+            8 => JobType::Student,
             _ => unreachable!(),
         }
     }
 }
 
 impl Person {
-    pub fn generate(
-        rng: &mut impl Rng,
-        home: Position,
-        job_type: Job,
-        job_location: Option<Position>,
-    ) -> Self {
+    pub fn generate(rng: &mut impl Rng, home: Position, job: Job) -> Self {
         Person {
             alive: true,
             sick: false,
             age: rng.gen_range(0..100),
             sex: rng.gen_bool(0.5),
-            job_type: Job::generate(rng),
-            job_location,
+            job,
             position: home.clone(),
             home,
             habits: PersonHabits {
@@ -142,10 +127,10 @@ impl Person {
     ) {
         match action {
             PersonAction::AtHome => {
-                let work_hours = self.job_type.work_hours();
+                let work_hours = self.job.ty.work_hours();
 
-                if let Some(job_location) = &self.job_location {
-                    if world.hours >= work_hours.start && world.hours <= work_hours.end {
+                if let Some(job_location) = &self.job.location {
+                    if world.hours >= work_hours.start && world.hours < work_hours.end {
                         let path = path_cache.get_path(
                             &world.map,
                             self.home.clone(),
@@ -163,14 +148,18 @@ impl Person {
                 }
             }
             PersonAction::Working => {
-                let work_hours = self.job_type.work_hours();
+                let work_hours = self.job.ty.work_hours();
 
-                if let Some(job_location) = &self.job_location {
+                if let Some(job_location) = &self.job.location {
                     if world.hours >= work_hours.end {
-                        let path =
-                            path_cache.get_path(&world.map, job_location.clone(), self.home.clone());
+                        let path = path_cache.get_path(
+                            &world.map,
+                            job_location.clone(),
+                            self.home.clone(),
+                        );
 
-                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                        *action =
+                            PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
                     }
                 }
             }

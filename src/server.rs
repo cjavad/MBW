@@ -92,7 +92,6 @@ impl GameSession {
         let serialized_payload = bincode::serialize(&network_payload).unwrap();
         let payload_size = (serialized_payload.len() as u32).to_be_bytes();
 
-        // TODO: Consider not awaiting
         self.player1.socket.write_all(&payload_size).await?;
         self.player1.socket.write_all(&serialized_payload).await?;
         self.player2.socket.write_all(&payload_size).await?;
@@ -186,7 +185,7 @@ async fn server_run_game(
         structures: crate::structures::STRUCTURES,
     };
 
-    let world = World::generate(setting, &mut rand::thread_rng());//rngs::StdRng::from_seed([132; 32]));
+    let world = World::generate(setting, &mut rand::thread_rng()); //rngs::StdRng::from_seed([132; 32]));
 
     let people_actions = world
         .people
