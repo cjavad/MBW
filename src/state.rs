@@ -59,6 +59,9 @@ impl State {
                     WorldUpdate::PersonUpdate(person_update) => match person_update {
                         PersonUpdate::Position(id, new_position) => {
                             self.world.people.get_mut(&id).unwrap().position = new_position;
+                        },
+                        PersonUpdate::Infected(id, is_infected) => {
+                            self.world.people.get_mut(&id).unwrap().infected = is_infected;
                         }
                     },
                     WorldUpdate::SetWorld(new_world) => self.world = new_world,
@@ -111,7 +114,7 @@ impl GameState for State {
 
                 ui.add_offset(Point::new(0, 1));
 
-                if person.sick {
+                if person.infected {
                     ui.print("INFECTED!!!");
                 }
             });
