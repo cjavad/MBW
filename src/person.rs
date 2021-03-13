@@ -37,6 +37,7 @@ pub enum PersonAction {
 pub struct PersonHabits {
     pub mask: f32,
     pub hygiene: f32,
+    pub socialscore: f32,
     pub acquaintances: HashSet<PersonId>,
 }
 
@@ -110,6 +111,7 @@ impl Person {
             habits: PersonHabits {
                 mask: rng.gen_range(0.0..1.0),
                 hygiene: rng.gen_range(0.0..1.0),
+                socialscore: rng.gen_range(0.0..0.15),
                 acquaintances: HashSet::new(),
             },
         }
