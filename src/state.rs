@@ -1,29 +1,28 @@
 use crate::client::ClientNetworkHandle;
 use crate::map_generation;
-use crate::person::PersonUpdate;
+use crate::person::{PersonUpdate, PersonId};
 use crate::server::WorldUpdate;
 use crate::structures;
+use crate::ui::Ui;
 use crate::world::World;
 use bracket_lib::prelude::*;
 
 pub struct State {
+    pub width: usize,
+    pub height: usize,
     pub world: World,
     pub handle: ClientNetworkHandle,
+    pub selected_person: Option<PersonId>,
 }
 
 impl State {
     pub fn new(handle: ClientNetworkHandle) -> Self {
-        let settings = map_generation::MapGenerationSettings {
-            width: 24,
-            height: 16,
-            structures: structures::STRUCTURES,
-        };
-
-        let mut rng = rand::thread_rng();
-
         Self {
-            world: World::empty(24, 16),
+            width: crate::MAP_WIDTH_CHUNKS * 6,
+            height: crate::MAP_HEIGHT_CHUNKS * 6,
+            world: World::empty(crate::MAP_WIDTH_CHUNKS, crate::MAP_HEIGHT_CHUNKS),
             handle,
+            selected_person: None,
         }
     }
 
@@ -60,5 +59,11 @@ impl GameState for State {
 
         self.handle_payloads();
         self.world.render(ctx, Point::new(0, 0));
+
+        let mut ui = Ui::new(ctx, self.width as i32, self.height as i32);
+
+        ui.rect(20, 30, |ui| {
+            ui.print("");
+        });
     }
 }
