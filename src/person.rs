@@ -1,9 +1,9 @@
 use crate::map::Position;
+use bracket_lib::prelude::*;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::ops::Range;
-use bracket_lib::prelude::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Job {
@@ -24,7 +24,7 @@ pub enum PersonUpdate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct PersonId(u32);
+pub struct PersonId(pub u32);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonHabits {
@@ -89,9 +89,7 @@ impl Job {
 }
 
 impl Person {
-    pub fn generate(rng: &mut impl Rng, homes: &Vec<Position>) -> Self {
-        let home = homes.choose(rng).unwrap().clone();
-
+    pub fn generate(rng: &mut impl Rng, home: Position) -> Self {
         Person {
             age: rng.gen_range(0..100),
             sex: rng.gen_bool(0.5),
@@ -111,6 +109,6 @@ impl Person {
     }
 
     pub fn render(&self, ctx: &mut BTerm) {
-        ctx.print_color(self.position.x, self.position.y, BLACK, LIGHT_BLUE, "&");
+        ctx.print_color(self.position.x, self.position.y, LIGHT_BLUE, BLACK, "&");
     }
 }

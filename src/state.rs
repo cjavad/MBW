@@ -1,6 +1,6 @@
-use crate::world;
 use crate::map_generation;
 use crate::structures;
+use crate::world;
 use bracket_lib::prelude::*;
 
 pub struct State {
