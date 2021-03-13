@@ -19,7 +19,7 @@ const MAP_HEIGHT_CHUNKS: usize = 16;
 pub struct Settings {
     #[clap(short, long)]
     server: bool,
-    #[clap(short, long, default_value = "mbwgame.ddns.net:35565")]
+    #[clap(short, long, default_value = "mbwgame.ddns.net:35566")]
     ip: String,
 }
 
