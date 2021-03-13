@@ -59,10 +59,11 @@ impl Map {
         position.x < self.width && position.y < self.height
     }
 
-    pub fn is_empty(&self, position: &Position) -> bool {
+    pub fn can_walk(&self, position: &Position) -> bool {
         if self.in_bounds(position) {
             match self.tiles[position.x][position.y] {
                 Tile::Empty => true,
+                Tile::Door => true,
                 _ => false,
             }
         } else {

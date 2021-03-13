@@ -1,7 +1,7 @@
 use crate::client::ClientNetworkHandle;
 use crate::map_generation;
-use crate::server::WorldUpdate;
 use crate::person::PersonUpdate;
+use crate::server::WorldUpdate;
 use crate::structures;
 use crate::world::World;
 use bracket_lib::prelude::*;
@@ -29,7 +29,9 @@ impl State {
 
     pub fn handle_payloads(&mut self) {
         for payload in self.handle.get_payloads() {
-            self.world.time = payload.age;
+            self.world.set_time(payload.age);
+
+            println!("hours: {}, min: {}", self.world.hours, self.world.minutes);
 
             // TODO: networking stuff with time and stuff
 
@@ -37,7 +39,11 @@ impl State {
                 // TODO: maybe switch to more broad update type that PersonUpdate
 
                 match update {
-                    WorldUpdate::PersonUpdate(_) => {},
+                    WorldUpdate::PersonUpdate(person_update) => match person_update {
+                        PersonUpdate::Position(id, new_position) => {
+                            self.world.people.get_mut(&id).unwrap().position = new_position;
+                        }
+                    },
                     WorldUpdate::SetWorld(new_world) => self.world = new_world,
                 }
             }

@@ -25,7 +25,9 @@ impl Location {
 /// Incapsulates the entire simulated world.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
-    pub time: u64,
+    pub minutes: u32,
+    pub hours: u8,
+    pub days: u8,
     pub map: Map,
     pub locations: HashMap<Position, Location>,
     pub people: HashMap<person::PersonId, person::Person>,
@@ -34,7 +36,9 @@ pub struct World {
 impl World {
     pub fn empty(chunks_w: usize, chunks_h: usize) -> Self {
         Self {
-            time: 0,
+            minutes: 0,
+            hours: 0,
+            days: 0,
             map: Map::fill(chunks_w * 6, chunks_h * 6, Tile::Empty),
             locations: HashMap::new(),
             people: HashMap::new(),
@@ -57,12 +61,19 @@ impl World {
             })
             .collect::<HashMap<_, _>>();
 
+        let mut jobs = HashMap::new();
+
         // find all homes and collect references
         let mut homes = locations
             .iter()
             .filter_map(|(position, location)| match location {
                 Location::Home => Some((position.clone(), Vec::new())),
-                _ => None,
+                Location::Job(job_type) => {
+                    jobs.entry(job_type)
+                        .or_insert(Vec::new())
+                        .push(position.clone());
+                    None
+                }
             })
             .collect::<HashMap<_, _>>();
 
@@ -75,7 +86,16 @@ impl World {
 
                 homes.get_mut(&home).unwrap().push(id.clone());
 
-                (id, person::Person::generate(rng, home))
+                let job_type = person::Job::generate(rng);
+
+                let job_location = jobs
+                    .get(&job_type)
+                    .map(|locations| locations.choose(rng).unwrap().clone());
+
+                (
+                    id,
+                    person::Person::generate(rng, home, job_type, job_location),
+                )
             })
             .collect();
 
@@ -89,11 +109,25 @@ impl World {
         }
 
         Self {
-            time: 0,
+            minutes: 0,
+            hours: 0,
+            days: 0,
             map,
             locations,
             people,
         }
+    }
+
+    pub fn set_time(&mut self, age: u64) {
+        const MINUTES_PER_AGE: u32 = 20;
+
+        self.minutes = age as u32 * MINUTES_PER_AGE;
+        
+        self.hours = (self.minutes / 60) as u8;
+        self.minutes = self.minutes % 60;
+
+        self.days = self.hours / 24;
+        self.hours = self.hours & 24;
     }
 
     pub fn render(&self, ctx: &mut BTerm, offset: Point) {
