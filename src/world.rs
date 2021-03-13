@@ -25,13 +25,22 @@ impl Location {
 /// Incapsulates the entire simulated world.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
+    pub time: u64,
     pub map: Map,
     pub locations: HashMap<Position, Location>,
     pub people: HashMap<person::PersonId, person::Person>,
-    pub paths: HashMap<(Position, Position), Vec<Position>>,
 }
 
 impl World {
+    pub fn empty(chunks_w: usize, chunks_h: usize) -> Self {
+        Self {
+            time: 0,
+            map: Map::fill(chunks_w * 6, chunks_h * 6, Tile::Empty),
+            locations: HashMap::new(),
+            people: HashMap::new(),
+        }
+    }
+
     pub fn generate(settings: MapGenerationSettings, rng: &mut impl Rng) -> Self {
         let map = settings.generate(rng);
 
@@ -80,58 +89,11 @@ impl World {
         }
 
         Self {
+            time: 0,
             map,
             locations,
             people,
-            paths: HashMap::new(),
         }
-    }
-
-    /// Finds a path between points and chaches the result in `paths`.
-    pub fn cache_path(&mut self, start: Position, end: Position) {
-        let (path, _cost) = pathfinding::prelude::astar(
-            &start,
-            |p| {
-                let mut neighbors = Vec::new();
-                let up = Position::new(p.x, p.y.saturating_sub(1));
-                let down = Position::new(p.x, p.y + 1);
-                let right = Position::new(p.x + 1, p.y);
-                let left = Position::new(p.x.saturating_sub(1), p.y);
-
-                if self.map.is_empty(&up) {
-                    neighbors.push((up, 1));
-                }
-
-                if self.map.is_empty(&down) {
-                    neighbors.push((down, 1));
-                }
-
-                if self.map.is_empty(&right) {
-                    neighbors.push((right, 1));
-                }
-
-                if self.map.is_empty(&left) {
-                    neighbors.push((left, 1));
-                }
-
-                neighbors
-            },
-            |_| 1,
-            |p| *p == end,
-        )
-        .unwrap();
-
-        self.paths.insert((start, end), path);
-    }
-
-    pub fn get_path(&mut self, start: Position, end: Position) -> &Vec<Position> {
-        let key = (start, end);
-
-        if !self.paths.contains_key(&key) {
-            self.cache_path(key.0.clone(), key.1.clone());
-        }
-
-        self.paths.get(&key).unwrap()
     }
 
     pub fn render(&self, ctx: &mut BTerm, offset: Point) {

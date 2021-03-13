@@ -14,7 +14,7 @@ pub struct ClientNetworkHandle {
 
 impl ClientNetworkHandle {
     pub fn get_payloads(&self) -> Vec<NetworkPayload> {
-        self.receiver.iter().collect()
+        self.receiver.try_iter().collect()
     }
 }
 

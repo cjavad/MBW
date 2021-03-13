@@ -1,6 +1,10 @@
-use crate::person::PersonUpdate;
+use crate::map::{Map, Position};
+use crate::map_generation::MapGenerationSettings;
+use crate::person::{Person, PersonAction, PersonId, PersonUpdate};
+use crate::world::World;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -12,6 +16,91 @@ pub struct GameSession {
     pub tick_count: u64,
     pub tick_rate: u8,
     pub age: u64,
+    pub world: World,
+    pub people_actions: HashMap<PersonId, PersonAction>,
+    pub paths: HashMap<(Position, Position), Vec<Position>>,
+}
+
+impl GameSession {
+    /// Finds a path between points and chaches the result in `paths`.
+    pub fn cache_path(&mut self, start: Position, end: Position) {
+        let (path, _cost) = pathfinding::prelude::astar(
+            &start,
+            |p| {
+                let mut neighbors = Vec::new();
+                let up = Position::new(p.x, p.y.saturating_sub(1));
+                let down = Position::new(p.x, p.y + 1);
+                let right = Position::new(p.x + 1, p.y);
+                let left = Position::new(p.x.saturating_sub(1), p.y);
+
+                if self.world.map.is_empty(&up) {
+                    neighbors.push((up, 1));
+                }
+
+                if self.world.map.is_empty(&down) {
+                    neighbors.push((down, 1));
+                }
+
+                if self.world.map.is_empty(&right) {
+                    neighbors.push((right, 1));
+                }
+
+                if self.world.map.is_empty(&left) {
+                    neighbors.push((left, 1));
+                }
+
+                neighbors
+            },
+            |_| 1,
+            |p| *p == end,
+        )
+        .unwrap();
+
+        self.paths.insert((start, end), path);
+    }
+
+    pub fn get_path(&mut self, start: Position, end: Position) -> &Vec<Position> {
+        let key = (start, end);
+
+        if !self.paths.contains_key(&key) {
+            self.cache_path(key.0.clone(), key.1.clone());
+        }
+
+        self.paths.get(&key).unwrap()
+    }
+
+    pub async fn send_playload(
+        &mut self,
+        updates: Vec<WorldUpdate>,
+    ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
+        // Create payload
+        let network_payload = NetworkPayload::create(&self, updates);
+        let serialized_payload = bincode::serialize(&network_payload).unwrap();
+        let payload_size = (serialized_payload.len() as u32).to_be_bytes();
+
+        // TODO: Consider not awaiting
+        self.player1.socket.write_all(&payload_size).await?;
+        self.player1.socket.write_all(&serialized_payload).await?;
+        self.player2.socket.write_all(&payload_size).await?;
+        self.player2.socket.write_all(&serialized_payload).await?;
+
+        Ok(())
+    }
+
+    pub fn update(&mut self) -> Vec<WorldUpdate> {
+        let mut updates = Vec::new();
+
+        for (id, person) in &mut self.world.people {
+            let action = self.people_actions.get_mut(id).unwrap();
+
+            match person.update(id.clone(), action) {
+                Some(u) => updates.push(WorldUpdate::PersonUpdate(u)),
+                None => {}
+            }
+        }
+
+        updates
+    }
 }
 
 pub struct PlayerSession {
@@ -31,6 +120,12 @@ impl PlayerSession {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum WorldUpdate {
+    SetWorld(World),
+    PersonUpdate(PersonUpdate),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NetworkPayload {
     /// Unix time in seconds
     pub timestamp: u64,
@@ -41,11 +136,11 @@ pub struct NetworkPayload {
     /// Server tickrate
     pub tick_rate: u8,
     /// Vector for PersonUpdate(s)
-    pub updates: Vec<PersonUpdate>,
+    pub updates: Vec<WorldUpdate>,
 }
 
 impl NetworkPayload {
-    pub fn create(state: &GameSession, updates: Vec<PersonUpdate>) -> Self {
+    pub fn create(state: &GameSession, updates: Vec<WorldUpdate>) -> Self {
         NetworkPayload {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -63,6 +158,20 @@ async fn server_run_game(
     player1: PlayerSession,
     player2: PlayerSession,
 ) -> Result<(PlayerSession, PlayerSession), Box<dyn std::error::Error + 'static + Send + Sync>> {
+    let setting = MapGenerationSettings {
+        width: 24,
+        height: 16,
+        structures: crate::structures::STRUCTURES,
+    };
+
+    let world = World::generate(setting, &mut rand::rngs::StdRng::from_seed([132; 32]));
+
+    let people_actions = world
+        .people
+        .keys()
+        .map(|id| (id.clone(), PersonAction::AtHome))
+        .collect();
+
     // Game logic
     let mut state = GameSession {
         player1,
@@ -70,22 +179,28 @@ async fn server_run_game(
         tick_count: 0,
         tick_rate: 20,
         age: 0,
+        world,
+        people_actions,
+        paths: HashMap::new(),
     };
 
+    println!("{}", state.player1.socket.peer_addr().unwrap());
+
+    state
+        .send_playload(vec![WorldUpdate::SetWorld(state.world.clone())])
+        .await?;
+
     loop {
-        println!("{}", state.player1.socket.peer_addr().unwrap());
         // Wait a tick before executing the next loop
         sleep(Duration::from_millis(1000 / state.tick_rate as u64)).await;
         // Count a tick
         state.tick_count = state.tick_count + 1;
         state.age = state.tick_count / state.tick_rate as u64;
-        let network_payload = NetworkPayload::create(&state, vec![]);
-        let serialized_payload = bincode::serialize(&network_payload).unwrap();
-        let payload_size = (serialized_payload.len() as u32).to_be_bytes();
-        state.player1.socket.write_all(&payload_size).await?;
-        state.player1.socket.write_all(&serialized_payload).await?;
-        state.player2.socket.write_all(&payload_size).await?;
-        state.player2.socket.write_all(&serialized_payload).await?;
+
+        println!("tick");
+
+        let updates = state.update();
+        state.send_playload(updates).await?;
     }
 
     //Ok((player1, player2))
@@ -98,6 +213,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sy
 
     // Init reusable rng
     let mut rng = rand::thread_rng();
+
+    let mut games = Vec::new();
 
     // Infinite socket loop, at least until two players have connected.
     loop {
@@ -113,6 +230,15 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sy
         let player2 = PlayerSession::create_player(player2_socket, !side);
 
         // Start game
-        tokio::spawn(server_run_game(player1, player2));
+        let game_future = tokio::spawn(server_run_game(player1, player2));
+
+        games.push(game_future);
     }
+
+    /*
+    for game in games {
+        game.await?;
+    }
+    Ok(())
+    */
 }

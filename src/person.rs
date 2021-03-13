@@ -27,6 +27,13 @@ pub enum PersonUpdate {
 pub struct PersonId(pub u32);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum PersonAction {
+    Working,
+    Walking(Vec<Position>),
+    AtHome,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonHabits {
     pub mask: f32,
     pub hygiene: f32,
@@ -110,5 +117,17 @@ impl Person {
 
     pub fn render(&self, ctx: &mut BTerm) {
         ctx.print_color(self.position.x, self.position.y, LIGHT_BLUE, BLACK, "&");
+    }
+
+    pub fn update(&mut self, id: PersonId, action: &mut PersonAction) -> Option<PersonUpdate> {
+        match action {
+            PersonAction::AtHome => None,
+            PersonAction::Walking(path) => {
+                self.position = path.pop().unwrap();
+
+                Some(PersonUpdate::Position(id, self.position.clone()))
+            }
+            PersonAction::Working => None,
+        }
     }
 }
