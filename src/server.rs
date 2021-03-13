@@ -8,7 +8,10 @@ use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::Interest;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::{
+    tcp::{OwnedReadHalf, OwnedWriteHalf},
+    TcpListener, TcpStream,
+};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 
@@ -87,7 +90,7 @@ pub struct GameSession {
     pub world: World,
     pub people_actions: HashMap<PersonId, PersonAction>,
     pub path_cache: PathCache,
-    pub sender: mpsc::Sender<PlayerUpdate>,
+    pub receiver: mpsc::Receiver<PlayerUpdate>,
 }
 
 impl GameSession {
@@ -199,36 +202,16 @@ impl GameSession {
 
         updates
     }
-
-    pub async fn listen_players(
-        &mut self,
-    ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
-        let mut header = [0; 4];
-        self.player1.socket.read_exact(&mut header).await?;
-        let mut data = vec![0; u32::from_be_bytes(header) as usize];
-        self.player1.socket.read_exact(&mut data).await?;
-        let payload: PlayerUpdate = bincode::deserialize(&data).unwrap();
-        self.sender.send(payload).await?;
-
-        let mut header = [0; 4];
-        self.player2.socket.read_exact(&mut header).await?;
-        let mut data = vec![0; u32::from_be_bytes(header) as usize];
-        self.player2.socket.read_exact(&mut data).await?;
-        let payload: PlayerUpdate = bincode::deserialize(&data).unwrap();
-        self.sender.send(payload).await?;
-
-        Ok(())
-    }
 }
 
 pub struct PlayerSession {
-    socket: TcpStream,
+    socket: OwnedWriteHalf,
     side: bool,
     created: bool,
 }
 
 impl PlayerSession {
-    pub fn create_player(socket: TcpStream, side: bool) -> Self {
+    pub fn create_player(socket: OwnedWriteHalf, side: bool) -> Self {
         PlayerSession {
             socket,
             side,
@@ -278,16 +261,24 @@ pub struct PlayerUpdate {
     pub tick_count: u64,
 }
 
-async fn handle_player_updates(mut receiver: mpsc::Receiver<PlayerUpdate>) {
-    while let Some(update) = receiver.recv().await {
-        // TODO: Handle player updates accordingly
-        println!("{:?}", update);
+async fn server_listener(
+    sender: mpsc::Sender<PlayerUpdate>,
+    mut read: OwnedReadHalf,
+) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
+    loop {
+        let mut header = [0; 4];
+        read.read_exact(&mut header).await?;
+        let mut data = vec![0; u32::from_be_bytes(header) as usize];
+        read.read_exact(&mut data).await?;
+        let payload = bincode::deserialize(&data).unwrap();
+
+        sender.send(payload).await?;
     }
 }
 
 async fn server_run_game(
-    player1: PlayerSession,
-    player2: PlayerSession,
+    player1: TcpStream,
+    player2: TcpStream,
 ) -> Result<(PlayerSession, PlayerSession), Box<dyn std::error::Error + 'static + Send + Sync>> {
     let setting = MapGenerationSettings {
         width: 24,
@@ -303,9 +294,23 @@ async fn server_run_game(
         .map(|id| (id.clone(), PersonAction::AtHome))
         .collect();
 
+    // Init reusable rng
+    let mut rng = rand::rngs::StdRng::from_seed([rand::thread_rng().gen_range(0..=255); 32]);
+
+    // Randomly decide sides
+    let side = rng.gen_bool(0.5);
+
+    let (player1_read, player1_write) = player1.into_split();
+    let (player2_read, player2_write) = player2.into_split();
+
+    // Init players
+    let player1 = PlayerSession::create_player(player1_write, side);
+    let player2 = PlayerSession::create_player(player2_write, !side);
+
     // Game logic
-    let (sender, mut receiver) = mpsc::channel::<PlayerUpdate>(100);
-    tokio::spawn(handle_player_updates(receiver));
+    let (sender, receiver) = mpsc::channel::<PlayerUpdate>(100);
+    tokio::spawn(server_listener(sender.clone(), player1_read));
+    tokio::spawn(server_listener(sender, player2_read));
 
     let mut session = GameSession {
         player1,
@@ -316,7 +321,7 @@ async fn server_run_game(
         world,
         people_actions,
         path_cache: PathCache::new(),
-        sender,
+        receiver,
     };
 
     session
@@ -332,7 +337,6 @@ async fn server_run_game(
 
         let updates = session.update();
         session.send_playload(updates).await?;
-        session.listen_players().await?
     }
 
     //Ok((player1, player2))
@@ -343,9 +347,6 @@ pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static +
     // Bind server to host and port
     let listener = TcpListener::bind(ip).await?;
 
-    // Init reusable rng
-    let mut rng = rand::thread_rng();
-
     let mut games = Vec::new();
 
     // Infinite socket loop, at least until two players have connected.
@@ -354,15 +355,8 @@ pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static +
         let (player1_socket, _) = listener.accept().await?;
         let (player2_socket, _) = listener.accept().await?;
 
-        // Randomly decide sides
-        let side = rng.gen_bool(0.5);
-
-        // Init players
-        let player1 = PlayerSession::create_player(player1_socket, side);
-        let player2 = PlayerSession::create_player(player2_socket, !side);
-
         // Start game
-        let game_future = tokio::spawn(server_run_game(player1, player2));
+        let game_future = tokio::spawn(server_run_game(player1_socket, player2_socket));
 
         games.push(game_future);
     }
