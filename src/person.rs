@@ -97,7 +97,7 @@ impl Person {
         Person {
             alive: true,
             sick: false,
-            age: rng.gen_range(0..100),
+            age: rng.gen_range(1..100),
             sex: rng.gen_bool(0.5),
             job,
             position: home.clone(),
