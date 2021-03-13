@@ -1,6 +1,7 @@
 mod client;
 mod map;
 mod map_generation;
+mod names;
 mod person;
 mod server;
 mod state;

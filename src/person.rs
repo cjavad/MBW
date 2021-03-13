@@ -1,5 +1,6 @@
 use crate::map::{Map, Position};
 use crate::server::{GameSession, PathCache};
+use crate::names::{FIRST_NAMES, LAST_NAMES};
 use crate::world::World;
 use bracket_lib::prelude::*;
 use rand::prelude::*;
@@ -53,6 +54,8 @@ pub struct PersonHabits {
 pub struct Person {
     pub alive: bool,
     pub sick: bool,
+    pub first_name: String,
+    pub last_name: String,
     pub age: u8,
     pub sex: bool,
     pub job: Job,
@@ -97,6 +100,8 @@ impl Person {
         Person {
             alive: true,
             sick: false,
+            first_name: FIRST_NAMES.choose(rng).unwrap().to_string(),
+            last_name: LAST_NAMES.choose(rng).unwrap().to_string(),
             age: rng.gen_range(1..100),
             sex: rng.gen_bool(0.5),
             job,
