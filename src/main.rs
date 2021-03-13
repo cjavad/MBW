@@ -9,15 +9,28 @@ mod structures;
 mod ui;
 mod world;
 
+use clap::Clap;
+
 const MAP_WIDTH_CHUNKS: usize = 24;
 const MAP_HEIGHT_CHUNKS: usize = 16;
 
-fn main() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
-    #[cfg(not(feature = "server"))]
-    client::run()?;
+#[derive(Clap)]
+#[clap(version = clap::crate_version!(), author = "The Boys")]
+pub struct Settings {
+    #[clap(short, long)]
+    server: bool,
+    #[clap(short, long, default_value = "mbwgame.ddns.net:35565")]
+    ip: String,
+}
 
-    #[cfg(feature = "server")]
-    server::run()?;
+fn main() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
+    let settings = Settings::parse();
+
+    if settings.server {
+        server::run(settings.ip)?;
+    } else {
+        client::run(settings.ip)?;
+    }
 
     Ok(())
 }

@@ -19,10 +19,11 @@ impl ClientNetworkHandle {
 }
 
 async fn client_main(
+    ip: String, 
     sender: Sender<NetworkPayload>,
 ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // Connect to host
-    let mut stream = TcpStream::connect("127.0.0.1:35565").await?;
+    let mut stream = TcpStream::connect(ip).await?;
 
     loop {
         let ready = stream
@@ -41,7 +42,7 @@ async fn client_main(
 }
 
 #[tokio::main]
-pub async fn run() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
+pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // init termial
     let ctx = BTermBuilder::simple(crate::MAP_WIDTH_CHUNKS * 6, crate::MAP_HEIGHT_CHUNKS * 6)?
         .with_title("MBW")
@@ -53,7 +54,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sy
     let handle = ClientNetworkHandle { receiver };
 
     // Connect to server
-    tokio::spawn(client_main(sender));
+    tokio::spawn(client_main(ip, sender));
 
     // init game state
     let state = state::State::new(handle);

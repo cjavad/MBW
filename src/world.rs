@@ -98,6 +98,10 @@ impl World {
                 (id, person::Person::generate(rng, home, job))
             })
             .collect();
+        
+        for _ in 0..10 {
+            people.values_mut().choose(rng).unwrap().sick = true;
+        }
 
         // add acquaintances based on homes
         for (id, person) in &mut people {
@@ -139,10 +143,19 @@ impl World {
         self.map.render(ctx, offset);
 
         for (location, persons) in person_locations {
+            let sick = persons.iter().map(|p| self.people[p].sick as i32 as f32).sum::<f32>() / persons.len() as f32;
+
+            let color = match sick {
+                n if n == 0.0 => LIGHT_BLUE,
+                n if n < 1.0 => ORANGE,
+                n if n == 1.0 => DARK_RED,
+                _ => unreachable!(),
+            };
+
             match persons.len() {
-                1 => ctx.print_color(location.x, location.y, LIGHT_BLUE, BLACK, "&"),
-                n if n <= 9 => ctx.print_color(location.x, location.y, LIGHT_BLUE, BLACK, n),
-                _ => ctx.print_color(location.x, location.y, LIGHT_BLUE, BLACK, "9+"),
+                1 => ctx.print_color(location.x, location.y, color, BLACK, "&"),
+                n if n <= 9 => ctx.print_color(location.x, location.y, color, BLACK, n),
+                _ => ctx.print_color(location.x, location.y, color, BLACK, "9+"),
             }
         }
     }

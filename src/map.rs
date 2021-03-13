@@ -24,8 +24,8 @@ impl Tile {
     pub fn render(&self, point: &Point, ctx: &mut BTerm) {
         match self {
             Tile::Empty => {}
-            Tile::Building => ctx.print_color(point.x, point.y, BROWN1, BLACK, "#"),
-            Tile::Door => ctx.print_color(point.x, point.y, DARK_BLUE, BLACK, "["),
+            Tile::Building => ctx.print_color(point.x, point.y, DARKOLIVEGREEN4, BLACK, "#"),
+            Tile::Door => ctx.print_color(point.x, point.y, BURLYWOOD, BLACK, "["),
         }
     }
 }

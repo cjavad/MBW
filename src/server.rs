@@ -283,9 +283,9 @@ async fn server_run_game(
 }
 
 #[tokio::main]
-pub async fn run() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
+pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // Bind server to host and port
-    let listener = TcpListener::bind("0.0.0.0:35565").await?;
+    let listener = TcpListener::bind(ip).await?;
 
     // Init reusable rng
     let mut rng = rand::thread_rng();
