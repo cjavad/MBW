@@ -1,4 +1,4 @@
-use crate::map::{Map, Position};
+use crate::map::{Map, Position, Tile};
 use crate::map_generation::MapGenerationSettings;
 use crate::person::{Person, PersonAction, PersonId, PersonUpdate};
 use crate::world::World;
@@ -283,8 +283,8 @@ pub struct PlayerUpdate {
 
 
 impl PlayerUpdate {
-    pub fn is_valid(self) -> bool {
-        match self.command {
+    pub fn is_valid(&self) -> bool {
+        match &self.command {
             PlayerCommand::PartyImpulse(Position) => self.side == true,
             PlayerCommand::AntivaxCampaign(Position) => self.side == true,
             PlayerCommand::Roadblock(Position) => self.side == true,
@@ -295,6 +295,21 @@ impl PlayerUpdate {
             PlayerCommand::Vaccinecenter(Position) => self.side == false,
             PlayerCommand::MaskCampaign(Position) => self.side == false,
             _ => false
+        }
+    }
+
+    pub fn tile_lookup(&self) -> Option<Tile> {
+        match &self.command {
+            PlayerCommand::PartyImpulse(Position) => Some(Tile::Empty),
+            PlayerCommand::AntivaxCampaign(Position) => Some(Tile::Empty),
+            PlayerCommand::Roadblock(Position) => Some(Tile::Empty),
+            PlayerCommand::SocialImpulse(Position) => Some(Tile::Empty),
+            PlayerCommand::EconomicCrash => None,
+            PlayerCommand::Testcenter(Position) => Some(Tile::Empty),
+            PlayerCommand::Lockdown => None,
+            PlayerCommand::Vaccinecenter(Position) => Some(Tile::Empty),
+            PlayerCommand::MaskCampaign(Position) => Some(Tile::Empty),
+            _ => None
         }
     }
 }
