@@ -54,4 +54,19 @@ impl Map {
             }
         }
     }
+
+    pub fn in_bounds(&self, position: &Position) -> bool {
+        position.x < self.width && position.y < self.height
+    }
+
+    pub fn is_empty(&self, position: &Position) -> bool {
+        if self.in_bounds(position) {
+            match self.tiles[position.x][position.y] {
+                Tile::Empty => true,
+                _ => false,
+            }
+        } else {
+            false
+        }
+    }
 }
