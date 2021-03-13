@@ -35,6 +35,8 @@ pub struct PersonHabits {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Person {
+    pub alive: bool,
+    pub sick: bool,
     pub age: u8,
     pub sex: bool,
     pub job: Job,
@@ -91,6 +93,8 @@ impl Job {
 impl Person {
     pub fn generate(rng: &mut impl Rng, home: Position) -> Self {
         Person {
+            alive: true,
+            sick: false,
             age: rng.gen_range(0..100),
             sex: rng.gen_bool(0.5),
             job: Job::generate(rng),
