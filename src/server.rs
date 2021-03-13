@@ -1,5 +1,4 @@
 use crate::person::PersonUpdate;
-use bincode;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -7,11 +6,12 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::sleep;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ServerState {
+pub struct GameSession {
+    pub player1: PlayerSession,
+    pub player2: PlayerSession,
     pub tick_count: u64,
     pub tick_rate: u8,
-    pub age: u32,
+    pub age: u64,
 }
 
 pub struct PlayerSession {
@@ -36,8 +36,8 @@ pub struct NetworkPayload {
     pub timestamp: u64,
     /// Current game tick
     pub tick_count: u64,
-    /// Age in minutes
-    pub age: u32,
+    /// Age in seconds
+    pub age: u64,
     /// Server tickrate
     pub tick_rate: u8,
     /// Vector for PersonUpdate(s)
@@ -45,7 +45,7 @@ pub struct NetworkPayload {
 }
 
 impl NetworkPayload {
-    pub fn create(state: &ServerState, updates: Vec<PersonUpdate>) -> Self {
+    pub fn create(state: &GameSession, updates: Vec<PersonUpdate>) -> Self {
         NetworkPayload {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -60,32 +60,39 @@ impl NetworkPayload {
 }
 
 async fn server_run_game(
-    mut player1: PlayerSession,
-    mut player2: PlayerSession,
+    player1: PlayerSession,
+    player2: PlayerSession,
 ) -> Result<(PlayerSession, PlayerSession), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // Game logic
-    let mut state = ServerState {
+    let mut state = GameSession {
+        player1,
+        player2,
         tick_count: 0,
         tick_rate: 20,
-        age: 0,
+        age: 0
     };
 
     loop {
-        println!("{}", player1.socket.peer_addr().unwrap());
+        println!("{}", state.player1.socket.peer_addr().unwrap());
         // Wait a tick before executing the next loop
         sleep(Duration::from_millis(1000 / state.tick_rate as u64)).await;
         // Count a tick
         state.tick_count = state.tick_count + 1;
-        let serialized_state = bincode::serialize(&state).unwrap();
-        player1.socket.write_all(&serialized_state).await?;
-        player2.socket.write_all(&serialized_state).await?;
+        state.age = state.tick_count / state.tick_rate as u64;
+        let network_payload = NetworkPayload::create(&state, vec![]);
+        let serialized_payload = bincode::serialize(&network_payload).unwrap();
+        let payload_size = (serialized_payload.len() as u32).to_be_bytes();
+        state.player1.socket.write_all(&payload_size).await?;
+        state.player1.socket.write_all(&serialized_payload).await?;
+        state.player2.socket.write_all(&payload_size).await?;
+        state.player2.socket.write_all(&serialized_payload).await?;
     }
 
     //Ok((player1, player2))
 }
 
 #[tokio::main]
-pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // Bind server to host and port
     let listener = TcpListener::bind("0.0.0.0:35565").await?;
 
