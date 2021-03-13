@@ -217,8 +217,6 @@ async fn server_run_game(
         state.tick_count = state.tick_count + 1;
         state.age = state.tick_count / state.tick_rate as u64;
 
-        println!("tick");
-
         let updates = state.update();
         state.send_playload(updates).await?;
     }
