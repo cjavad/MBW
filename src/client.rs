@@ -1,4 +1,4 @@
-use crate::server::{NetworkPayload, PlayerUpdate};
+use crate::server::{NetworkPayload, PlayerCommand};
 use crate::state;
 use bracket_lib::prelude::*;
 use std::error::Error;
@@ -18,14 +18,14 @@ impl ClientNetworkHandle {
     }
 }
 
-pub struct PlayerUpdateHandle {
-    sender: Sender<PlayerUpdate>,
+pub struct PlayerCommandHandle {
+    sender: Sender<PlayerCommand>,
 }
 
 async fn client_main(
     ip: String,
     sender: Sender<NetworkPayload>,
-    receiver: Receiver<PlayerUpdate>,
+    receiver: Receiver<PlayerCommand>,
 ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // Connect to host
     let mut stream = TcpStream::connect(ip).await?;
@@ -45,7 +45,7 @@ async fn client_main(
         }
 
         if ready.is_writable() {
-            let collected: Vec<PlayerUpdate> = receiver.try_iter().collect();
+            let collected: Vec<PlayerCommand> = receiver.try_iter().collect();
             for update in collected {
                 let serialized_payload = bincode::serialize(&update).unwrap();
                 let payload_size = (serialized_payload.len() as u32).to_be_bytes();
@@ -72,7 +72,7 @@ pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static +
     };
     // Player network queue for player action updates
     let (player_sender, player_receiver) = channel();
-    let player_handle = PlayerUpdateHandle {
+    let player_handle = PlayerCommandHandle {
         sender: player_sender,
     };
 
@@ -83,7 +83,7 @@ pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static +
     let state = state::State::new(client_handle);
     player_handle
         .sender
-        .send(PlayerUpdate { tick_count: 0 })
+        .send(PlayerCommand::Lockdown)
         .unwrap();
 
     // run main loop

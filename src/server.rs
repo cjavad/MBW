@@ -263,23 +263,55 @@ impl NetworkPayload {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum PlayerCommand {
+    PartyImpulse(Position),
+    AntivaxCampaign(Position),
+    Roadblock(Position),
+    SocialImpulse(Position),
+    EconomicCrash,
+    Testcenter(Position),
+    Lockdown,
+    Vaccinecenter(Position),
+    MaskCampaign(Position)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PlayerUpdate {
-    // TODO: Define player updates
-    pub tick_count: u64,
+    side: bool,
+    command: PlayerCommand,
+}
+
+
+impl PlayerUpdate {
+    pub fn is_valid(self) -> bool {
+        match self.command {
+            PlayerCommand::PartyImpulse(Position) => self.side == true,
+            PlayerCommand::AntivaxCampaign(Position) => self.side == true,
+            PlayerCommand::Roadblock(Position) => self.side == true,
+            PlayerCommand::SocialImpulse(Position) => self.side == true,
+            PlayerCommand::EconomicCrash => self.side == true,
+            PlayerCommand::Testcenter(Position) => self.side == false,
+            PlayerCommand::Lockdown => self.side == false,
+            PlayerCommand::Vaccinecenter(Position) => self.side == false,
+            PlayerCommand::MaskCampaign(Position) => self.side == false,
+            _ => false
+        }
+    }
 }
 
 async fn server_listener(
     sender: Sender<PlayerUpdate>,
     mut read: OwnedReadHalf,
+    side: bool
 ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     loop {
         let mut header = [0; 4];
         read.read_exact(&mut header).await?;
         let mut data = vec![0; u32::from_be_bytes(header) as usize];
         read.read_exact(&mut data).await?;
-        let payload = bincode::deserialize(&data).unwrap();
+        let command: PlayerCommand = bincode::deserialize(&data).unwrap();
 
-        sender.send(payload).unwrap();
+        sender.send(PlayerUpdate { side, command }).unwrap();
     }
 }
 
@@ -316,8 +348,8 @@ async fn server_run_game(
 
     // Game logic
     let (sender, receiver) = channel();
-    tokio::spawn(server_listener(sender.clone(), player1_read));
-    tokio::spawn(server_listener(sender, player2_read));
+    tokio::spawn(server_listener(sender.clone(), player1_read, player1.side));
+    tokio::spawn(server_listener(sender, player2_read, player2.side));
 
     let mut session = GameSession {
         player1,
