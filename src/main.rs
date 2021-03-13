@@ -6,10 +6,12 @@ mod server;
 mod state;
 mod structures;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     #[cfg(not(feature = "server"))]
-    client::run().unwrap();
+    client::run()?;
 
     #[cfg(feature = "server")]
-    server::run();
+    server::run()?;
+
+    Ok(())
 }

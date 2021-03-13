@@ -398,5 +398,5 @@ pub const STRUCTURES: &[Structure] = &[
                 },
             ),
         ],
-    }
+    },
 ];
