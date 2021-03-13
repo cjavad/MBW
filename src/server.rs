@@ -92,7 +92,6 @@ impl GameSession {
         let serialized_payload = bincode::serialize(&network_payload).unwrap();
         let payload_size = (serialized_payload.len() as u32).to_be_bytes();
 
-        // TODO: Consider not awaiting
         self.player1.socket.write_all(&payload_size).await?;
         self.player1.socket.write_all(&serialized_payload).await?;
         self.player2.socket.write_all(&payload_size).await?;
@@ -102,14 +101,66 @@ impl GameSession {
     }
 
     pub fn update(&mut self) -> Vec<WorldUpdate> {
+        let mut rng = rand::thread_rng();
         self.world.set_time(self.age);
 
         let mut updates = Vec::new();
+        let mut person_locations: HashMap<Position, Vec<PersonId>> = HashMap::new();
 
         for (id, person) in &self.world.people {
             let action = self.people_actions.get_mut(id).unwrap();
-
+            person_locations
+                .entry(person.position.clone())
+                .or_insert(Vec::new())
+                .push(id.clone());
             person.update_action(&self.world, &mut self.path_cache, action);
+        }
+
+        for (position, persons) in &person_locations {
+            let tile = self.world.map.get_tile(position);
+
+            for other_id in persons {
+                let other_person = self.world.people.get(other_id).unwrap().clone();
+
+                for id in persons {
+                    let mut infection_chance: f32 = 0.5;
+
+                    // If it's the same person as the inital loop skip
+                    if other_id == id {
+                        continue;
+                    }
+
+                    let person = self.world.people.get_mut(id).unwrap();
+
+                    // False sex have better immune systems than true sex
+                    if !person.sex {
+                        infection_chance = infection_chance - 0.1;
+                    }
+
+                    // Check if you and the other people are wearing masks
+                    if person.habits.mask > rng.gen_range(0.0..1.0) {
+                        if other_person.habits.mask > rng.gen_range(0.0..1.0) {
+                            infection_chance = infection_chance / 2.0;
+                        } else {
+                            infection_chance = infection_chance / 10.0;
+                        }
+                    }
+
+                    // The older you are the worse your immune system is
+                    infection_chance = infection_chance + (person.age as u32 / 500) as f32;
+
+                    if other_person.sick && infection_chance > rng.gen_range(0.0..1.0) {
+                        person.sick = true;
+                    }
+
+                    // See if they become friends
+                    if person.habits.socialscore > rng.gen_range(0.0..1.0)
+                        && !person.habits.acquaintances.contains(other_id)
+                    {
+                        person.habits.acquaintances.insert(other_id.clone());
+                    }
+                }
+            }
         }
 
         for (id, person) in &mut self.world.people {

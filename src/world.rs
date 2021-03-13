@@ -9,14 +9,14 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Location {
     Home,
-    Job(person::Job),
+    Job(person::JobType),
 }
 
 impl Location {
     pub fn generate(rng: &mut impl Rng) -> Self {
         match rng.gen_range(0..2) {
             0 => Location::Home,
-            1 => Location::Job(person::Job::generate(rng)),
+            1 => Location::Job(person::JobType::generate(rng)),
             _ => unreachable!(),
         }
     }
@@ -68,10 +68,8 @@ impl World {
             .iter()
             .filter_map(|(position, location)| match location {
                 Location::Home => Some((position.clone(), Vec::new())),
-                Location::Job(job_type) => {
-                    jobs.entry(job_type)
-                        .or_insert(Vec::new())
-                        .push(position.clone());
+                Location::Job(job) => {
+                    jobs.entry(job).or_insert(Vec::new()).push(position.clone());
                     None
                 }
             })
@@ -86,16 +84,18 @@ impl World {
 
                 homes.get_mut(&home).unwrap().push(id.clone());
 
-                let job_type = person::Job::generate(rng);
+                let job_type = person::JobType::generate(rng);
 
                 let job_location = jobs
                     .get(&job_type)
                     .map(|locations| locations.choose(rng).unwrap().clone());
 
-                (
-                    id,
-                    person::Person::generate(rng, home, job_type, job_location),
-                )
+                let job = person::Job {
+                    ty: job_type,
+                    location: job_location,
+                };
+
+                (id, person::Person::generate(rng, home, job))
             })
             .collect();
 

@@ -13,7 +13,7 @@ impl Position {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Tile {
     Empty,
     Building,
@@ -44,6 +44,10 @@ impl Map {
             height,
             tiles: vec![vec![tile; height]; width],
         }
+    }
+
+    pub fn get_tile(&self, position: &Position) -> &Tile {
+        &self.tiles[position.x][position.y]
     }
 
     pub fn render(&self, ctx: &mut BTerm, offset: Point) {
