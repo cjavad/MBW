@@ -1,12 +1,13 @@
 use crate::person::PersonUpdate;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use bincode;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
-use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ServerState {
     pub tick_count: u64,
     pub tick_rate: u8,
@@ -68,21 +69,27 @@ impl NetworkPayload {
 
 #[tokio::main]
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    // Bind server to host and port
     let listener = TcpListener::bind("0.0.0.0:35565").await?;
+    // Inital 2 player variables
     let mut player1: Option<PlayerSession> = None;
     let mut player2: Option<PlayerSession> = None;
 
+    // Infinite socket loop, at least until two players have connected.
     loop {
+        // Wait until a client tries to connect
         let (socket, _) = listener.accept().await?;
 
+        // If player 1 is already connected, proceed to connect player two and start the game.
         if player1.is_some() {
             player2 = Some(PlayerSession::create_player2(
                 socket,
                 &player1.as_ref().unwrap(),
             ));
 
-            let player1 = std::mem::replace(&mut player1, None).unwrap();
-            let player2 = std::mem::replace(&mut player2, None).unwrap();
+            // Remove player instances from outside async loop
+            let mut player1 = std::mem::replace(&mut player1, None).unwrap();
+            let mut player2 = std::mem::replace(&mut player2, None).unwrap();
 
             tokio::spawn(async move {
                 // Game logic
@@ -94,11 +101,17 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
                 loop {
                     println!("{}", player1.socket.peer_addr().unwrap());
+                    // Wait a tick before executing the next loop
                     sleep(Duration::from_millis(1000 / state.tick_rate as u64)).await;
+                    // Count a tick
                     state.tick_count = state.tick_count + 1;
+                    let serialized_state = bincode::serialize(&state).unwrap();
+                    player1.socket.write_all(&serialized_state).await;
+                    player2.socket.write_all(&serialized_state).await;
                 }
             });
         } else {
+            // Otherwise connect as player 1
             player1 = Some(PlayerSession::create_player1(socket));
         }
     }
