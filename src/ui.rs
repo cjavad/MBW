@@ -6,6 +6,7 @@ pub struct Ui<'a> {
     pub width: i32,
     pub height: i32,
     pub ctx: &'a mut BTerm,
+    pub left_click: bool,
 }
 
 impl<'a> Ui<'a> {
@@ -15,6 +16,7 @@ impl<'a> Ui<'a> {
             offset: Point::new(0, 0),
             width,
             height,
+            left_click: INPUT.lock().is_mouse_button_pressed(0) && ctx.left_click,
             ctx,
         }
     }
@@ -23,12 +25,18 @@ impl<'a> Ui<'a> {
         self.offset = self.offset + point;
     }
 
-    pub fn rect(
-        &'a mut self,
-        width: i32,
-        height: i32,
-        mut f: impl FnMut(&mut Self),
-    ) {
+    pub fn sub(&'a mut self, width: i32, height: i32, offset: Point) -> Self {
+        Self {
+            position: self.offset,
+            offset,
+            width,
+            height,
+            ctx: &mut *self.ctx,
+            left_click: self.left_click,
+        }
+    }
+
+    pub fn rect(&'a mut self, width: i32, height: i32, mut f: impl FnMut(&mut Self)) {
         self.ctx.draw_box(
             self.offset.x,
             self.offset.y,
@@ -38,40 +46,19 @@ impl<'a> Ui<'a> {
             DARK_GREEN,
         );
 
-        let mut ui = Self {
-            position: self.offset,
-            offset: Point::new(1, 1),
-            width,
-            height,
-            ctx: &mut *self.ctx,
-        };
+        let mut ui = self.sub(width, height, Point::new(1, 1));
 
         f(&mut ui);
     }
 
-    pub fn text(
-        &'a mut self,
-        text: impl Into<String>,
-        mut f: impl FnMut(&mut Self),
-    ) {
+    pub fn text(&'a mut self, text: impl Into<String>, mut f: impl FnMut(&mut Self)) {
         let text = text.into();
-        self.ctx.print_color(
-            self.offset.x,
-            self.offset.y,
-            GREEN,
-            DARK_GREEN,
-            &text,
-        );
+        self.ctx
+            .print_color(self.offset.x, self.offset.y, GREEN, DARK_GREEN, &text);
 
         self.offset.y += 1;
 
-        let mut ui = Self {
-            position: self.offset,
-            offset: Point::new(0, 0),
-            width: text.len() as i32,
-            height: 1,
-            ctx: &mut *self.ctx,
-        };
+        let mut ui = self.sub(text.len() as i32, 1, Point::new(0, 0));
 
         f(&mut ui);
     }
@@ -82,13 +69,13 @@ impl<'a> Ui<'a> {
             self.position.x + self.offset.x,
             self.position.y + self.offset.y,
             GREEN,
-            DARK_GREEN,
+            BLACK,
             &text,
         );
     }
 
     pub fn clicked(&self) -> bool {
-        INPUT.lock().is_mouse_button_pressed(0)
+        self.left_click
             && self.ctx.mouse_point().x >= self.position.x
             && self.ctx.mouse_point().x <= self.position.x + self.width
             && self.ctx.mouse_point().y >= self.position.y
