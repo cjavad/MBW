@@ -114,7 +114,7 @@ impl GameSession {
     pub fn update(&mut self) -> Vec<WorldUpdate> {
         let mut rng = rand::thread_rng();
         self.world.set_time(self.age);
-
+        
         let mut updates = Vec::new();
         let mut person_locations: HashMap<Position, Vec<PersonId>> = HashMap::new();
 
@@ -201,6 +201,13 @@ impl GameSession {
         }
 
         updates
+    }
+
+    pub async fn handle_players(&mut self) {
+        while let Some(update) = self.receiver.recv().await {
+            // TODO: Handle player updates accordingly
+            println!("{:?}", update);
+        }
     }
 }
 
