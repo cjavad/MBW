@@ -100,7 +100,7 @@ impl World {
             .collect();
         
         for _ in 0..10 {
-            people.values_mut().choose(rng).unwrap().sick = true;
+            people.values_mut().choose(rng).unwrap().infected = true;
         }
 
         // add acquaintances based on homes
@@ -143,7 +143,7 @@ impl World {
         self.map.render(ctx, offset);
 
         for (location, persons) in person_locations {
-            let sick = persons.iter().map(|p| self.people[p].sick as i32 as f32).sum::<f32>() / persons.len() as f32;
+            let sick = persons.iter().map(|p| self.people[p].infected as i32 as f32).sum::<f32>() / persons.len() as f32;
 
             let color = match sick {
                 n if n == 0.0 => LIGHT_BLUE,
