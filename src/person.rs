@@ -30,6 +30,7 @@ pub struct Job {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PersonUpdate {
     Position(PersonId, Position),
+    Infected(PersonId, bool),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -47,13 +48,15 @@ pub struct PersonHabits {
     pub mask: f32,
     pub hygiene: f32,
     pub socialscore: f32,
+    pub vaccination_bias: f32,
     pub acquaintances: HashSet<PersonId>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Person {
     pub alive: bool,
-    pub sick: bool,
+    pub infected: bool,
+    pub vaccinated: bool,
     pub first_name: String,
     pub last_name: String,
     pub age: u8,
@@ -113,12 +116,13 @@ impl Person {
     pub fn generate(rng: &mut impl Rng, home: Position, job: Job) -> Self {
         Person {
             alive: true,
-            sick: false,
+            infected: false,
+            vaccinated: false,
             first_name: FIRST_NAMES.choose(rng).unwrap().to_string(),
             last_name: LAST_NAMES.choose(rng).unwrap().to_string(),
             age: match rng.gen_range(0.0..1.0) {
                 n if n > 0.2 => rng.gen_range(18..40),
-                _ => rng.gen_range(40..80)
+                _ => rng.gen_range(40..80),
             },
             sex: rng.gen_bool(0.5),
             job,
@@ -127,6 +131,7 @@ impl Person {
             habits: PersonHabits {
                 mask: rng.gen_range(0.0..1.0),
                 hygiene: rng.gen_range(0.0..1.0),
+                vaccination_bias: rng.gen_range(0.0..1.0),
                 socialscore: rng.gen_range(0.0..0.15),
                 acquaintances: HashSet::new(),
             },

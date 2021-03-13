@@ -139,23 +139,31 @@ impl GameSession {
 
                     // False sex have better immune systems than true sex
                     if !person.sex {
-                        infection_chance = infection_chance - 0.1;
+                        infection_chance -= 0.1;
                     }
+
+                    // Check if you and the other people are wearing masks
+                    infection_chance /= 2.0;
 
                     // Check if you and the other people are wearing masks
                     if person.habits.mask > rng.gen_range(0.0..1.0) {
                         if other_person.habits.mask > rng.gen_range(0.0..1.0) {
-                            infection_chance = infection_chance / 2.0;
+                            infection_chance /=  2.0;
                         } else {
-                            infection_chance = infection_chance / 10.0;
+                            infection_chance /= 10.0;
                         }
                     }
 
                     // The older you are the worse your immune system is
-                    infection_chance = infection_chance + (person.age as u32 / 500) as f32;
+                    infection_chance += (person.age as u32 / 500) as f32;
 
-                    if other_person.sick && infection_chance > rng.gen_range(0.0..1.0) {
-                        person.sick = true;
+                    if person.vaccinated  {
+                        infection_chance *= 0.05;
+                    }
+
+                    if other_person.infected && infection_chance > rng.gen_range(0.0..1.0) {
+                        person.infected = true;
+                        updates.push(WorldUpdate::PersonUpdate(PersonUpdate::Infected(id.clone(), person.infected)));
                     }
 
                     // See if they become friends
