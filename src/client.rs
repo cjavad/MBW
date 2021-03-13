@@ -43,7 +43,7 @@ async fn client_main(
 #[tokio::main]
 pub async fn run() -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // init termial
-    let ctx = BTermBuilder::simple(24 * 6, 16 * 6)?
+    let ctx = BTermBuilder::simple(crate::MAP_WIDTH_CHUNKS * 6, crate::MAP_HEIGHT_CHUNKS * 6)?
         .with_title("MBW")
         .with_vsync(true)
         .with_fps_cap(60.0)

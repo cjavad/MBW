@@ -186,7 +186,7 @@ async fn server_run_game(
         structures: crate::structures::STRUCTURES,
     };
 
-    let world = World::generate(setting, &mut rand::thread_rng());//rngs::StdRng::from_seed([132; 32]));
+    let world = World::generate(setting, &mut rand::thread_rng()); //rngs::StdRng::from_seed([132; 32]));
 
     let people_actions = world
         .people

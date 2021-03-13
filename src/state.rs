@@ -4,9 +4,12 @@ use crate::person::PersonUpdate;
 use crate::server::WorldUpdate;
 use crate::structures;
 use crate::world::World;
+use crate::ui::Ui;
 use bracket_lib::prelude::*;
 
 pub struct State {
+    pub width: usize,
+    pub height: usize,
     pub world: World,
     pub handle: ClientNetworkHandle,
 }
@@ -22,7 +25,9 @@ impl State {
         let mut rng = rand::thread_rng();
 
         Self {
-            world: World::empty(24, 16),
+            width: crate::MAP_WIDTH_CHUNKS * 6,
+            height: crate::MAP_HEIGHT_CHUNKS * 6,
+            world: World::empty(crate::MAP_WIDTH_CHUNKS, crate::MAP_HEIGHT_CHUNKS),
             handle,
         }
     }
@@ -31,7 +36,10 @@ impl State {
         for payload in self.handle.get_payloads() {
             self.world.set_time(payload.age);
 
-            println!("days: {}, hours: {}, min: {}", self.world.days, self.world.hours, self.world.minutes);
+            println!(
+                "days: {}, hours: {}, min: {}",
+                self.world.days, self.world.hours, self.world.minutes
+            );
 
             // TODO: networking stuff with time and stuff
 
@@ -57,5 +65,18 @@ impl GameState for State {
 
         self.handle_payloads();
         self.world.render(ctx, Point::new(0, 0));
+
+        let mut ui = Ui::new(ctx, self.width as i32, self.height as i32);
+
+        ui.add_offset(Point::new(10, 10));
+        ui.rect(20, 30, |ui| {
+            ui.print("Test menu");
+            ui.add_offset(Point::new(1, 1));
+            ui.print("Woo, menu shit");
+            
+            if ui.clicked() {
+                println!("i am clicked");
+            }
+        });
     }
 }

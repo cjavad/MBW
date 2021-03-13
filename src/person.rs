@@ -167,10 +167,14 @@ impl Person {
 
                 if let Some(job_location) = &self.job_location {
                     if world.hours >= work_hours.end {
-                        let path =
-                            path_cache.get_path(&world.map, job_location.clone(), self.home.clone());
+                        let path = path_cache.get_path(
+                            &world.map,
+                            job_location.clone(),
+                            self.home.clone(),
+                        );
 
-                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                        *action =
+                            PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
                     }
                 }
             }
