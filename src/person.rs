@@ -76,6 +76,20 @@ impl JobType {
         }
     }
 
+    pub fn as_str(&self) -> &str {
+        match self {
+            JobType::Doctor => "Doctor",
+            JobType::Programmer => "Programmer",
+            JobType::Clerk => "Clerk",
+            JobType::PoliceOfficer => "Police Officer",
+            JobType::FireFighter => "Fire Fighter",
+            JobType::PublicServant => "Public Servant",
+            JobType::Chef => "Chef",
+            JobType::Teacher => "Teacher",
+            JobType::Student => "Student",
+        }
+    }
+
     pub fn generate(rng: &mut impl Rng) -> Self {
         match rng.gen_range(0..9) {
             0 => JobType::Doctor,
@@ -97,7 +111,7 @@ impl Person {
         Person {
             alive: true,
             sick: false,
-            age: rng.gen_range(1..100),
+            age: rng.gen_range(18..100),
             sex: rng.gen_bool(0.5),
             job,
             position: home.clone(),

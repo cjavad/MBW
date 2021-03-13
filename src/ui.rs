@@ -65,6 +65,9 @@ impl<'a> Ui<'a> {
 
     pub fn print(&mut self, text: impl Into<String>) {
         let text = text.into();
+
+        self.offset.y += 1;
+
         self.ctx.print_color(
             self.position.x + self.offset.x,
             self.position.y + self.offset.y,

@@ -1,6 +1,6 @@
 use crate::map::{Map, Position, Tile};
 use crate::map_generation::MapGenerationSettings;
-use crate::person;
+use crate::person::{self, PersonId, Person};
 use bracket_lib::prelude::*;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -76,7 +76,7 @@ impl World {
             .collect::<HashMap<_, _>>();
 
         // generate people with random homes
-        let mut people: HashMap<person::PersonId, person::Person> = (0..1)
+        let mut people: HashMap<person::PersonId, person::Person> = (0..400)
             .into_iter()
             .map(|id| {
                 let home = homes.keys().choose(rng).unwrap().clone();
@@ -130,11 +130,14 @@ impl World {
         self.hours = self.hours % 24;
     }
 
-    pub fn render(&self, ctx: &mut BTerm, offset: Point) {
+    pub fn render(&self, ctx: &mut BTerm, person_locations: &HashMap<Position, Vec<PersonId>>, offset: Point) {
         self.map.render(ctx, offset);
 
-        for (_id, person) in &self.people {
-            person.render(ctx);
+        for (location, persons) in person_locations {
+            match persons.len() {
+                1 => ctx.print_color(location.x, location.y, LIGHT_BLUE, BLACK, "&"),
+                _ => {},
+            }
         }
     }
 }

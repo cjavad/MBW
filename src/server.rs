@@ -21,6 +21,11 @@ impl PathCache {
         }
     }
 
+    /// Clears the cache
+    pub fn invalidate(&mut self) {
+        self.paths.clear();
+    }
+
     /// Finds a path between points and chaches the result in `paths`.
     pub fn cache_path(&mut self, map: &Map, start: Position, end: Position) {
         let (path, _cost) = pathfinding::prelude::astar(
@@ -250,7 +255,7 @@ async fn server_run_game(
         player1,
         player2,
         tick_count: 600,
-        tick_rate: 20,
+        tick_rate: 10,
         age: 0,
         world,
         people_actions,
