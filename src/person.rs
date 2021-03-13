@@ -1,4 +1,4 @@
-use crate::map::{Position, Map};
+use crate::map::{Map, Position};
 use crate::server::{GameSession, PathCache};
 use crate::world::World;
 use bracket_lib::prelude::*;
@@ -143,11 +143,15 @@ impl Person {
                 let work_hours = self.job_type.work_hours();
 
                 if let Some(job_location) = &self.job_location {
-                    if world.hours >= work_hours.start && world.hours <= work_hours.end
-                    {
-                        let path = path_cache.get_path(&world.map, self.home.clone(), job_location.clone());
+                    if world.hours >= work_hours.start && world.hours <= work_hours.end {
+                        let path = path_cache.get_path(
+                            &world.map,
+                            self.home.clone(),
+                            job_location.clone(),
+                        );
 
-                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::Working));
+                        *action =
+                            PersonAction::Walking(path.clone(), Box::new(PersonAction::Working));
                     }
                 }
             }
@@ -156,7 +160,16 @@ impl Person {
                     *action = (**next).clone();
                 }
             }
-            _ => {},
+            PersonAction::Working => {
+                let work_hours = self.job_type.work_hours();
+
+                if world.hours >= work_hours.end {
+                    let path =
+                        path_cache.get_path(&world.map, self.home.clone(), self.home.clone());
+
+                    *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                }
+            }
         }
     }
 

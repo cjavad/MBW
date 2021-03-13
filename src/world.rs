@@ -122,12 +122,12 @@ impl World {
         const MINUTES_PER_AGE: u32 = 20;
 
         self.minutes = age as u32 * MINUTES_PER_AGE;
-        
+
         self.hours = (self.minutes / 60) as u8;
         self.minutes = self.minutes % 60;
 
         self.days = self.hours / 24;
-        self.hours = self.hours & 24;
+        self.hours = self.hours % 24;
     }
 
     pub fn render(&self, ctx: &mut BTerm, offset: Point) {

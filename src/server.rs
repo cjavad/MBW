@@ -106,12 +106,11 @@ impl GameSession {
 
         for (id, person) in &self.world.people {
             let action = self.people_actions.get_mut(id).unwrap();
-            
+
             person.update_action(&self.world, &mut self.path_cache, action);
         }
 
         for (id, person) in &mut self.world.people {
-            
             let action = self.people_actions.get_mut(id).unwrap();
 
             match person.update(id.clone(), action) {
