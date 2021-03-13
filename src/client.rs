@@ -19,7 +19,7 @@ impl ClientNetworkHandle {
 }
 
 async fn client_main(
-    ip: String, 
+    ip: String,
     sender: Sender<NetworkPayload>,
 ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     // Connect to host

@@ -59,7 +59,7 @@ impl State {
                     WorldUpdate::PersonUpdate(person_update) => match person_update {
                         PersonUpdate::Position(id, new_position) => {
                             self.world.people.get_mut(&id).unwrap().position = new_position;
-                        },
+                        }
                         PersonUpdate::Infected(id, is_infected) => {
                             self.world.people.get_mut(&id).unwrap().infected = is_infected;
                         }

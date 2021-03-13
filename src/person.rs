@@ -56,6 +56,7 @@ pub struct PersonHabits {
 pub struct Person {
     pub alive: bool,
     pub infected: bool,
+    pub tick_last_touched: u64,
     pub vaccinated: bool,
     pub first_name: String,
     pub last_name: String,
@@ -118,10 +119,11 @@ impl Person {
             alive: true,
             infected: false,
             vaccinated: false,
+            tick_last_touched: 0,
             first_name: FIRST_NAMES.choose(rng).unwrap().to_string(),
             last_name: LAST_NAMES.choose(rng).unwrap().to_string(),
             age: match rng.gen_range(0.0..1.0) {
-                n if n > 0.2 => rng.gen_range(18..40),
+                n if n > 0.3 => rng.gen_range(18..40),
                 _ => rng.gen_range(40..80),
             },
             sex: rng.gen_bool(0.5),
