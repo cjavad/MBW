@@ -63,6 +63,9 @@ impl State {
                         PersonUpdate::Infected(id, is_infected) => {
                             self.world.people.get_mut(&id).unwrap().infected = is_infected;
                         }
+                        PersonUpdate::LifeStatus(id, is_alive) => {
+                            self.world.people.get_mut(&id).unwrap().alive = is_alive;
+                        }
                     },
                     StateUpdate::SetSide(side) => self.side = side,
                     StateUpdate::SetWorld(new_world) => self.world = new_world,

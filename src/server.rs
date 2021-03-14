@@ -181,6 +181,22 @@ impl GameSession {
                             id.clone(),
                             person.infected,
                         )));
+                    // If you have been infected for more than a week
+                    } else if person.infected && self.tick_count - person.tick_infected > 604800 {
+                        // If true, die, otherwise live.
+                        if rng.gen_bool((person.age as f64) / 500.0) {
+                            person.alive = false;
+                            updates.push(StateUpdate::PersonUpdate(PersonUpdate::LifeStatus(
+                                id.clone(),
+                                person.alive,
+                            )));
+                        } else {
+                            person.infected = false;
+                            updates.push(StateUpdate::PersonUpdate(PersonUpdate::Infected(
+                                id.clone(),
+                                person.infected,
+                            )));
+                        }
                     }
 
                     // See if they become friends
