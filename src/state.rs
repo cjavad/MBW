@@ -229,6 +229,20 @@ impl State {
         ui.offset(Point::new(0, 1));
         ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
             ui.offset(Point::new(1, 1));
+            ui.print("Lockdown");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::Lockdown(Default::default()).price_lookup()
+            ));
+
+            if ui.clicked() {
+                self.selected_ability = Some(Ability::Lockdown);
+            }
+        });
+
+        ui.offset(Point::new(0, 1));
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
+            ui.offset(Point::new(1, 1));
             ui.print("Testcenter");
             ui.print(format!(
                 "Cost: {}",
@@ -333,10 +347,15 @@ impl GameState for State {
                 ui.print("Person: ");
                 ui.offset(Point::new(1, 1));
                 ui.print(format!("Name: {} {}", person.first_name, person.last_name));
+                ui.offset(Point::new(0, 1));
                 ui.print(format!("Alive: {}", person.alive));
+                ui.offset(Point::new(0, 1));
                 ui.print(format!("Age: {}", person.age));
+                ui.offset(Point::new(0, 1));
                 ui.print(format!("Job: {}", person.job.ty.as_str()));
+                ui.offset(Point::new(0, 1));
                 ui.print(format!("Employed: {}", person.job.location.is_some()));
+                ui.offset(Point::new(0, 1));
                 ui.print(format!(
                     "Sex: {}",
                     match person.sex {
@@ -344,9 +363,21 @@ impl GameState for State {
                         false => "Female",
                     }
                 ));
+                ui.offset(Point::new(0, 1));
                 ui.print(format!("Tested: {}", person.tested));
+                ui.offset(Point::new(0, 1));
                 ui.print(format!("Vaccinated: {}", person.vaccinated));
-                ui.print(format!(""));
+                ui.offset(Point::new(0, 1));
+
+                let wears_mask = match person.habits.mask {
+                    n if n < 0.1 => "Never",
+                    n if n < 0.3 => "Sometimes",
+                    n if n < 0.6 => "Often",
+                    n if n < 0.9 => "Usually",
+                    _ => "Always",
+                };
+
+                ui.print(format!("Wears mask: {}", wears_mask));
 
                 if person.infected {
                     ui.offset(Point::new(0, 1));
