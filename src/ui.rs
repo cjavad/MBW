@@ -22,6 +22,7 @@ impl DrawUi for UiRect {
 }
 
 pub struct UiPrint {
+    color: (u8, u8, u8),
     rect: Rect,
     text: String,
 }
@@ -31,7 +32,7 @@ impl DrawUi for UiPrint {
         ctx.bterm.print_color(
             self.rect.position.x,
             self.rect.position.y,
-            GREEN,
+            self.color,
             BLACK,
             &self.text,
         );
@@ -117,6 +118,16 @@ impl Ui {
 
     pub fn print(&mut self, text: impl Into<String>) {
         self.drawables.push(Box::new(UiPrint {
+            color: GREEN,
+            rect: self.get_rect(),
+            text: text.into(),
+        }));
+        self.offset(Point::new(0, 1));
+    }
+
+    pub fn print_color(&mut self, color: (u8, u8, u8), text: impl Into<String>) {
+        self.drawables.push(Box::new(UiPrint {
+            color,
             rect: self.get_rect(),
             text: text.into(),
         }));
@@ -129,6 +140,7 @@ impl Ui {
         f(&ui);
 
         self.drawables.push(Box::new(UiPrint {
+            color: GREEN,
             rect: self.get_rect(),
             text: text,
         }));

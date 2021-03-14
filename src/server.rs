@@ -63,14 +63,20 @@ impl PathCache {
             },
             |_| 1,
             |p| *p == start,
-        ).map(|(p, _)| p);
+        )
+        .map(|(p, _)| p);
 
         // hehe xD, shiz fucked, but works better than the alternative
         // double reversed order
         self.paths.insert((start, end), path);
     }
 
-    pub fn get_path(&mut self, map: &Map, start: Position, end: Position) -> &Option<Vec<Position>> {
+    pub fn get_path(
+        &mut self,
+        map: &Map,
+        start: Position,
+        end: Position,
+    ) -> &Option<Vec<Position>> {
         let key = (start, end);
 
         if !self.paths.contains_key(&key) {
@@ -586,15 +592,15 @@ impl PlayerCommand {
 
     pub fn price_lookup(&self) -> u32 {
         match self {
-            PlayerCommand::PartyImpulse(_) => 400,
+            PlayerCommand::PartyImpulse(_) => 250,
             PlayerCommand::AntivaxCampaign(_) => 800,
             PlayerCommand::Roadblock(_) => 80,
-            PlayerCommand::SocialImpulse(_) => 240,
-            PlayerCommand::EconomicCrash => 1500,
-            PlayerCommand::Testcenter(_) => 500,
+            PlayerCommand::SocialImpulse(_) => 180,
+            PlayerCommand::EconomicCrash => 800,
+            PlayerCommand::Testcenter(_) => 300,
             PlayerCommand::Lockdown(_) => 100,
-            PlayerCommand::Vaccinecenter(_) => 1200,
-            PlayerCommand::MaskCampaign(_) => 400,
+            PlayerCommand::Vaccinecenter(_) => 600,
+            PlayerCommand::MaskCampaign(_) => 200,
         }
     }
 }

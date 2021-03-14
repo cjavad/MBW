@@ -180,8 +180,10 @@ impl Person {
                         );
 
                         if let Some(path) = path {
-                            *action =
-                                PersonAction::Walking(path.clone(), Box::new(PersonAction::Working));
+                            *action = PersonAction::Walking(
+                                path.clone(),
+                                Box::new(PersonAction::Working),
+                            );
                         }
                     } else if world.time.hours >= work_hours.end {
                         // randomly go shopping
@@ -220,7 +222,8 @@ impl Person {
                         path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
 
                     if let Some(path) = path {
-                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                        *action =
+                            PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
                     }
                 }
             }
@@ -230,7 +233,8 @@ impl Person {
                         path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
 
                     if let Some(path) = path {
-                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                        *action =
+                            PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
                     }
                 }
             }
@@ -241,7 +245,8 @@ impl Person {
                         path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
 
                     if let Some(path) = path {
-                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                        *action =
+                            PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
                     }
                 }
             }
