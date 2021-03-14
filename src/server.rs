@@ -300,34 +300,47 @@ pub struct PlayerUpdate {
     command: PlayerCommand,
 }
 
-impl PlayerUpdate {
-    pub fn is_valid(&self) -> bool {
-        match &self.command {
-            PlayerCommand::PartyImpulse(Position) => self.side == true,
-            PlayerCommand::AntivaxCampaign(Position) => self.side == true,
-            PlayerCommand::Roadblock(Position) => self.side == true,
-            PlayerCommand::SocialImpulse(Position) => self.side == true,
-            PlayerCommand::EconomicCrash => self.side == true,
-            PlayerCommand::Testcenter(Position) => self.side == false,
-            PlayerCommand::Lockdown(Position) => self.side == false,
-            PlayerCommand::Vaccinecenter(Position) => self.side == false,
-            PlayerCommand::MaskCampaign(Position) => self.side == false,
+impl PlayerCommand {
+    pub fn is_valid(&self, side: bool) -> bool {
+        match self {
+            PlayerCommand::PartyImpulse(_) => side == true,
+            PlayerCommand::AntivaxCampaign(_) => side == true,
+            PlayerCommand::Roadblock(_) => side == true,
+            PlayerCommand::SocialImpulse(_) => side == true,
+            PlayerCommand::EconomicCrash => side == true,
+            PlayerCommand::Testcenter(_) => side == false,
+            PlayerCommand::Lockdown(_) => side == false,
+            PlayerCommand::Vaccinecenter(_) => side == false,
+            PlayerCommand::MaskCampaign(_) => side == false,
             _ => false,
         }
     }
 
     pub fn tile_lookup(&self) -> Option<Tile> {
-        match &self.command {
-            PlayerCommand::PartyImpulse(Position) => Some(Tile::Empty),
-            PlayerCommand::AntivaxCampaign(Position) => Some(Tile::Empty),
-            PlayerCommand::Roadblock(Position) => Some(Tile::Empty),
-            PlayerCommand::SocialImpulse(Position) => Some(Tile::Empty),
+        match self {
+            PlayerCommand::PartyImpulse(_) => Some(Tile::Empty),
+            PlayerCommand::AntivaxCampaign(_) => Some(Tile::Empty),
+            PlayerCommand::Roadblock(_) => Some(Tile::Empty),
+            PlayerCommand::SocialImpulse(_) => Some(Tile::Empty),
             PlayerCommand::EconomicCrash => None,
-            PlayerCommand::Testcenter(Position) => Some(Tile::Empty),
-            PlayerCommand::Lockdown => Some(Tile::Door),
-            PlayerCommand::Vaccinecenter(Position) => Some(Tile::Empty),
-            PlayerCommand::MaskCampaign(Position) => Some(Tile::Empty),
-            _ => None,
+            PlayerCommand::Testcenter(_) => Some(Tile::Door),
+            PlayerCommand::Lockdown(_) => Some(Tile::Door),
+            PlayerCommand::Vaccinecenter(_) => Some(Tile::Empty),
+            PlayerCommand::MaskCampaign(_) => Some(Tile::Empty),
+        }
+    }
+
+    pub fn price_lookup(&self) -> u32 {
+        match self {
+            PlayerCommand::PartyImpulse(_) => 200,
+            PlayerCommand::AntivaxCampaign(_) => 800,
+            PlayerCommand::Roadblock(_) => 60,
+            PlayerCommand::SocialImpulse(_) => 120,
+            PlayerCommand::EconomicCrash => 1500,
+            PlayerCommand::Testcenter(_) => 1000,
+            PlayerCommand::Lockdown(_) => 70,
+            PlayerCommand::Vaccinecenter(_) => 1200,
+            PlayerCommand::MaskCampaign(_) => 400,
         }
     }
 }
