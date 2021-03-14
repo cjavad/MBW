@@ -114,6 +114,7 @@ impl State {
                         self.world.map.tiles[position.x][position.y] = tile;
                     }
                     StateUpdate::SetWorld(new_world) => self.world = new_world,
+                    StateUpdate::Winner(winner) => { println!("{} won", winner); panic!(); },
                 }
             }
         }

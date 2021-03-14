@@ -506,6 +506,30 @@ impl GameSession {
         });
         self.send_playload(updates).await.unwrap();
     }
+
+    pub async fn is_game_over_and_who_won(&mut self) -> Option<bool> {
+        let mut all_total: u32 = 0;
+        let mut all_infected: u32 = 0;
+
+        for (_id, person) in &self.world.people {
+            all_total += 1;
+            if person.infected {
+                all_infected += 1;
+            }
+        }
+
+        if self.world.time.days > 3 {
+            if all_total as f32 / all_infected as f32 >= 2.0 {
+                self.send_playload(vec![StateUpdate::Winner(true)]).await;
+                Some(true)
+            } else {
+                self.send_playload(vec![StateUpdate::Winner(false)]).await;
+                Some(false)
+            }
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -535,6 +559,7 @@ impl PlayerSession {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum StateUpdate {
     SetWorld(World),
+    Winner(bool),
     TileUpdate(Position, Tile),
     PersonUpdate(PersonUpdate),
 }
@@ -751,6 +776,16 @@ async fn server_run_game(
 
         let updates = session.update(&mut rng).await;
         session.send_playload(updates).await?;
+
+        match session.is_game_over_and_who_won().await {
+            Some(false) => {
+                println!("President won!");
+            }
+            Some(true) => {
+                println!("Virus won!");
+            }
+            _ => {}
+        }
     }
 
     //Ok((player1, player2))
