@@ -298,6 +298,19 @@ impl GameState for State {
                 ui.print("Selected:");
                 ui.print(format!(" {}", ability.as_str()));
             }
+
+            ui.offset(Point::new(0, 2));
+            ui.print("Color codes:");
+            ui.offset(Point::new(1, 1));
+            ui.print_color(LIGHT_BLUE, "&: Untested");
+            ui.offset(Point::new(0, 1));
+            ui.print_color(GREEN2, "&: Tested");
+            ui.offset(Point::new(0, 1));
+            ui.print_color(BLUE, "&: Vaccinated");
+            ui.offset(Point::new(0, 1));
+            ui.print_color(ORANGE, "&: Half Infected Group");
+            ui.offset(Point::new(0, 1));
+            ui.print_color(DARK_RED, "&: Infected");
         });
 
         ui.set_offset(Point::new(30, 0));
