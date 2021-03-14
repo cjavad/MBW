@@ -294,7 +294,6 @@ pub enum PlayerCommand {
     MaskCampaign(Position), // Sets Person.habits.mask to 1 when person passses positions
 }
 
-
 impl PlayerCommand {
     pub fn is_valid(&self, side: bool) -> bool {
         match self {

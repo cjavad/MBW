@@ -7,6 +7,30 @@ use crate::world::World;
 use bracket_lib::prelude::*;
 use std::collections::HashMap;
 
+pub enum Ability {
+    AntivaxCampain,
+    Roadblock,
+    SocialImpulse,
+    Testcenter,
+    Lockdown,
+    Vaccinecenter,
+    MaskCampain,
+}
+
+impl Ability {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Ability::AntivaxCampain => "Antivax Campaign",
+            Ability::Roadblock => "Roadblock",
+            Ability::SocialImpulse => "Social Impulse",
+            Ability::Testcenter => "Testcenter",
+            Ability::Vaccinecenter => "Vaccinecenter",
+            Ability::Lockdown => "Lockdown",
+            Ability::MaskCampain => "Mask Campaign",
+        }
+    }
+}
+
 pub struct State {
     pub side: bool,
     pub width: usize,
@@ -15,6 +39,7 @@ pub struct State {
     pub handle: ClientNetworkHandle,
     pub command_handle: PlayerCommandHandle,
     pub selected_person: Option<PersonId>,
+    pub selected_ability: Option<Ability>,
     pub person_locations: HashMap<Position, Vec<PersonId>>,
 }
 
@@ -28,6 +53,7 @@ impl State {
             handle,
             command_handle,
             selected_person: None,
+            selected_ability: None,
             person_locations: HashMap::new(),
         }
     }
@@ -76,6 +102,8 @@ impl State {
         }
     }
 
+    const ABILITY_RECT_WIDTH: i32 = 20;
+
     pub fn virus_ui(&mut self, ui: &mut Ui) {
         ui.print("VIRUS:");
         ui.print(" Your job is to");
@@ -85,27 +113,33 @@ impl State {
         ui.print("Abilities:");
 
         ui.offset(Point::new(1, 1));
-        ui.rect(15, 6, |ui| {
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
             ui.offset(Point::new(1, 1));
-            ui.print("Barricade");
+            ui.print("Roadblock");
             ui.print(format!(
                 "Cost: {}",
                 PlayerCommand::Roadblock(Default::default()).price_lookup()
             ));
+
+            if ui.clicked() {
+                self.selected_ability = Some(Ability::Roadblock);
+            }
         });
 
         ui.offset(Point::new(0, 1));
-        ui.rect(15, 6, |ui| {
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
             ui.offset(Point::new(1, 1));
             ui.print("Party Impulse");
             ui.print(format!(
                 "Cost: {}",
                 PlayerCommand::PartyImpulse(Default::default()).price_lookup()
             ));
+
+            
         });
 
         ui.offset(Point::new(0, 1));
-        ui.rect(15, 6, |ui| {
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
             ui.offset(Point::new(1, 1));
             ui.print("Economic Crash");
             ui.print(format!(
@@ -152,6 +186,12 @@ impl GameState for State {
                 self.virus_ui(ui);
             } else {
             }
+
+            if let Some(ability) = &self.selected_ability {
+                ui.offset(Point::new(0, 2));
+                ui.print("Selected:");
+                ui.print(format!(" {}", ability.as_str()));
+            } 
         });
 
         ui.set_offset(Point::new(30, 0));
@@ -212,12 +252,54 @@ impl GameState for State {
             });
         }
 
-        if ui.mouse_click && self.selected_person.is_none() && ctx.mouse_point().x >= 30 {
-            if let Some(persons) = self.person_locations.get(&Position::new(
-                ctx.mouse_point().x as usize - 30,
-                ctx.mouse_point().y as usize,
-            )) {
-                self.selected_person = Some(persons[0].clone());
+        if ui.mouse_click && self.selected_person.is_none() {
+            if ctx.mouse_point().x >= 30 {
+                if let Some(ability) = &self.selected_ability {
+                    let position = Position::new(
+                        ctx.mouse_point().x as usize - 30,
+                        ctx.mouse_point().y as usize,
+                    );
+
+                    match ability {
+                        Ability::AntivaxCampain => {
+                            self.command_handle
+                                .send(PlayerCommand::AntivaxCampaign(position));
+                        }
+                        Ability::Roadblock => {
+                            self.command_handle
+                                .send(PlayerCommand::Roadblock(position));
+                        }
+                        Ability::SocialImpulse => {
+                            self.command_handle
+                                .send(PlayerCommand::SocialImpulse(position));
+                        }
+                        Ability::Testcenter => {
+                            self.command_handle
+                                .send(PlayerCommand::Testcenter(position));
+                        }
+                        Ability::Lockdown => {
+                            self.command_handle
+                                .send(PlayerCommand::Lockdown(position));
+                        }
+                        Ability::Vaccinecenter => {
+                            self.command_handle
+                                .send(PlayerCommand::Vaccinecenter(position));
+                        }
+                        Ability::MaskCampain => {
+                            self.command_handle
+                                .send(PlayerCommand::MaskCampaign(position));
+                        }
+                    }
+                } else {
+                    if let Some(persons) = self.person_locations.get(&Position::new(
+                        ctx.mouse_point().x as usize - 30,
+                        ctx.mouse_point().y as usize,
+                    )) {
+                        self.selected_person = Some(persons[0].clone());
+                    }
+                }
+
+                self.selected_ability = None;
             }
         }
 
