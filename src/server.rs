@@ -346,6 +346,17 @@ impl GameSession {
                                 world.map.tiles[position.x][position.y],
                             ));
                             path_cache.invalidate();
+                        } else if world.map.tiles[position.x][position.y]
+                            == update.command.tile_lookup()[1] 
+                        {
+                            *money -= price;
+
+                            world.map.tiles[position.x][position.y] = Tile::Empty;
+                            updates.push(StateUpdate::TileUpdate(
+                                position.clone(),
+                                world.map.tiles[position.x][position.y],
+                            ));
+                            path_cache.invalidate();
                         }
                     }
                     PlayerCommand::SocialImpulse(position) => {
@@ -563,7 +574,7 @@ impl PlayerCommand {
         match self {
             PlayerCommand::PartyImpulse(_) => &[Tile::Empty],
             PlayerCommand::AntivaxCampaign(_) => &[Tile::Empty],
-            PlayerCommand::Roadblock(_) => &[Tile::Empty],
+            PlayerCommand::Roadblock(_) => &[Tile::Empty, Tile::RoadBlock],
             PlayerCommand::SocialImpulse(_) => &[Tile::Empty],
             PlayerCommand::EconomicCrash => &[],
             PlayerCommand::Testcenter(_) => &[Tile::Empty],
