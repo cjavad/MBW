@@ -135,7 +135,7 @@ impl State {
             ui.print("Roadblock");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::Roadblock(Default::default()).price_lookup()
+                PlayerCommand::Roadblock(Default::default()).price_lookup(self.side)
             ));
 
             if ui.clicked() {
@@ -149,7 +149,7 @@ impl State {
             ui.print("Party Impulse");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::PartyImpulse(Default::default()).price_lookup()
+                PlayerCommand::PartyImpulse(Default::default()).price_lookup(self.side)
             ));
 
             if ui.clicked() {
@@ -166,7 +166,7 @@ impl State {
             ui.print("Social Impulse");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::SocialImpulse(Default::default()).price_lookup()
+                PlayerCommand::SocialImpulse(Default::default()).price_lookup(self.side)
             ));
 
             if ui.clicked() {
@@ -180,7 +180,7 @@ impl State {
             ui.print("Economic Crash");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::EconomicCrash.price_lookup()
+                PlayerCommand::EconomicCrash.price_lookup(self.side)
             ));
 
             if ui.clicked() {
@@ -204,7 +204,7 @@ impl State {
             ui.print("Roadblock");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::Roadblock(Default::default()).price_lookup()
+                PlayerCommand::Roadblock(Default::default()).price_lookup(self.side)
             ));
 
             if ui.clicked() {
@@ -218,7 +218,7 @@ impl State {
             ui.print("Mask Campaign");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::MaskCampaign(Default::default()).price_lookup()
+                PlayerCommand::MaskCampaign(Default::default()).price_lookup(self.side)
             ));
 
             if ui.clicked() {
@@ -232,7 +232,7 @@ impl State {
             ui.print("Lockdown");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::Lockdown(Default::default()).price_lookup()
+                PlayerCommand::Lockdown(Default::default()).price_lookup(self.side)
             ));
 
             if ui.clicked() {
@@ -246,7 +246,7 @@ impl State {
             ui.print("Testcenter");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::Testcenter(Default::default()).price_lookup()
+                PlayerCommand::Testcenter(Default::default()).price_lookup(self.side)
             ));
 
             if ui.clicked() {
@@ -260,7 +260,7 @@ impl State {
             ui.print("Vaccinecenter");
             ui.print(format!(
                 "Cost: {}",
-                PlayerCommand::Vaccinecenter(Default::default()).price_lookup()
+                PlayerCommand::Vaccinecenter(Default::default()).price_lookup(self.side)
             ));
 
             if ui.clicked() {

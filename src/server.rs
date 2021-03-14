@@ -285,7 +285,7 @@ impl GameSession {
                     Player::Player2 => &mut player2.money,
                 };
 
-                let price = update.command.price_lookup();
+                let price = update.command.price_lookup(update.side);
 
                 if *money < price {
                     return;
@@ -617,11 +617,11 @@ impl PlayerCommand {
         }
     }
 
-    pub fn price_lookup(&self) -> u32 {
+    pub fn price_lookup(&self, side: bool) -> u32 {
         match self {
             PlayerCommand::PartyImpulse(_) => 250,
             PlayerCommand::AntivaxCampaign(_) => 800,
-            PlayerCommand::Roadblock(_) => 80,
+            PlayerCommand::Roadblock(_) => if side { 150 } else { 80 },
             PlayerCommand::SocialImpulse(_) => 180,
             PlayerCommand::EconomicCrash => 800,
             PlayerCommand::Testcenter(_) => 300,
