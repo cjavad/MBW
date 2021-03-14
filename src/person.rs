@@ -47,6 +47,7 @@ pub enum PersonAction {
     Shopping(u32),
     AtHome,
     Partying(u32),
+    Lockdown(u32),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -62,6 +63,7 @@ pub struct PersonHabits {
 pub struct Person {
     pub alive: bool,
     pub infected: bool,
+    pub lockdown: bool,
     pub tick_infected: u64,
     pub tick_last_touched: u64,
     pub tested: bool,
@@ -127,6 +129,7 @@ impl Person {
             alive: true,
             infected: false,
             vaccinated: false,
+            lockdown: false,
             tested: false,
             tick_infected: 0,
             tick_last_touched: 0,
@@ -239,6 +242,19 @@ impl Person {
                 }
             }
             PersonAction::Partying(time) => {
+                let _ = time.saturating_sub(1);
+                if *time == 0 {
+                    let path =
+                        path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
+
+                    if let Some(path) = path {
+                        *action =
+                            PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                    }
+                }
+            }
+
+            PersonAction::Lockdown(time) => {
                 let _ = time.saturating_sub(1);
                 if *time == 0 {
                     let path =

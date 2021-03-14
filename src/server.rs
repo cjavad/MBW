@@ -353,7 +353,7 @@ impl GameSession {
                             ));
                             path_cache.invalidate();
                         } else if world.map.tiles[position.x][position.y]
-                            == update.command.tile_lookup()[1] 
+                            == update.command.tile_lookup()[1]
                         {
                             *money -= price;
 
@@ -432,6 +432,33 @@ impl GameSession {
                             == update.command.tile_lookup()[0]
                         {
                             *money -= price;
+                            let mut people_in_lockdown: HashSet<PersonId> = HashSet::new();
+
+                            for (id, person) in &world.people {
+                                let person = world.people.get(&id).unwrap();
+                                if *position == person.home {
+                                    people_in_lockdown.insert(id.clone());
+                                }
+                            }
+
+                            for id in people_in_lockdown {
+                                let person = world.people.get_mut(&id).unwrap();
+                                person.lockdown = true;
+
+                                let action = people_actions.get_mut(&id).unwrap();
+                                let path = path_cache.get_path(
+                                    &world.map,
+                                    person.position.clone(),
+                                    person.home.clone(),
+                                );
+
+                                if let Some(path) = path {
+                                    *action = PersonAction::Walking(
+                                        path.clone(),
+                                        Box::new(PersonAction::Lockdown(1440)),
+                                    );
+                                }
+                            }
 
                             world.map.tiles[position.x][position.y] = Tile::Door(Some(1440));
                             updates.push(StateUpdate::TileUpdate(
