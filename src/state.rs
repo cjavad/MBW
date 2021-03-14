@@ -62,8 +62,10 @@ impl State {
                         }
                         PersonUpdate::Infected(id, is_infected) => {
                             self.world.people.get_mut(&id).unwrap().infected = is_infected;
-                        },
-
+                        }
+                        PersonUpdate::LifeStatus(id, is_alive) => {
+                            self.world.people.get_mut(&id).unwrap().alive = is_alive;
+                        }
                     },
                     StateUpdate::SetSide(side) => self.side = side,
                     StateUpdate::SetWorld(new_world) => self.world = new_world,
@@ -72,9 +74,7 @@ impl State {
         }
     }
 
-    pub fn virus_ui(&mut self, ui: &mut Ui) {
-
-    }
+    pub fn virus_ui(&mut self, ui: &mut Ui) {}
 }
 
 impl GameState for State {
@@ -98,7 +98,6 @@ impl GameState for State {
         if self.side {
             self.virus_ui(&mut ui);
         } else {
-            
         }
 
         let selected_person = &mut self.selected_person;

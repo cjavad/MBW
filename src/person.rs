@@ -29,6 +29,7 @@ pub struct Job {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PersonUpdate {
+    LifeStatus(PersonId, bool),
     Position(PersonId, Position),
     Infected(PersonId, bool),
 }
