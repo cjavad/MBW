@@ -22,6 +22,12 @@ pub struct PlayerCommandHandle {
     sender: Sender<PlayerCommand>,
 }
 
+impl PlayerCommandHandle {
+    pub fn send(&self, command: PlayerCommand) {
+        self.sender.send(command).unwrap();
+    }
+}
+
 async fn client_main(
     ip: String,
     sender: Sender<NetworkPayload>,
@@ -83,7 +89,7 @@ pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static +
     tokio::spawn(client_main(ip, client_sender, player_receiver));
 
     // init game state
-    let state = state::State::new(client_handle);
+    let state = state::State::new(client_handle, player_handle);
 
     // run main loop
     main_loop(ctx, state)

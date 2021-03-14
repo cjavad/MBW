@@ -1,7 +1,7 @@
-use crate::client::ClientNetworkHandle;
+use crate::client::{ClientNetworkHandle, PlayerCommandHandle};
 use crate::map::Position;
 use crate::person::{PersonId, PersonUpdate};
-use crate::server::StateUpdate;
+use crate::server::{StateUpdate, PlayerCommand};
 use crate::ui::{DrawContext, DrawUi, Rect, Ui};
 use crate::world::World;
 use bracket_lib::prelude::*;
@@ -13,18 +13,20 @@ pub struct State {
     pub height: usize,
     pub world: World,
     pub handle: ClientNetworkHandle,
+    pub command_handle: PlayerCommandHandle,
     pub selected_person: Option<PersonId>,
     pub person_locations: HashMap<Position, Vec<PersonId>>,
 }
 
 impl State {
-    pub fn new(handle: ClientNetworkHandle) -> Self {
+    pub fn new(handle: ClientNetworkHandle, command_handle: PlayerCommandHandle) -> Self {
         Self {
             side: true,
             width: crate::MAP_WIDTH_CHUNKS * 6,
             height: crate::MAP_HEIGHT_CHUNKS * 6,
             world: World::empty(crate::MAP_WIDTH_CHUNKS, crate::MAP_HEIGHT_CHUNKS),
             handle,
+            command_handle,
             selected_person: None,
             person_locations: HashMap::new(),
         }
@@ -75,15 +77,6 @@ impl State {
     }
 
     pub fn virus_ui(&mut self, ui: &mut Ui) {
-        ui.offset(Point::new(1, 1));
-
-        ui.print(format!(
-            "Time: {:.2}:{:.2}:{:.2}",
-            self.world.time.days, self.world.time.hours, self.world.time.minutes
-        ));
-
-        ui.offset(Point::new(0, 1));
-
         ui.print("VIRUS:");
         ui.print(" Your job is to");
         ui.print(" infect the city.");
@@ -103,6 +96,17 @@ impl State {
             ui.offset(Point::new(1, 1));
             ui.print("Party");
             ui.print("Cost: 200");
+        });
+
+        ui.offset(Point::new(0, 1));
+        ui.rect(15, 6, |ui| {
+            ui.offset(Point::new(1, 1));
+            ui.print("Economic Crash");
+            ui.print("Cost: 800");
+
+            if ui.clicked() {
+                self.command_handle.send(PlayerCommand::EconomicCrash);
+            }
         });
     }
 }
@@ -126,6 +130,15 @@ impl GameState for State {
         );
 
         ui.rect(30, self.height as i32, |ui| {
+            ui.offset(Point::new(1, 1));
+
+            ui.print(format!(
+                "Time: {:#02}:{:#02}:{:#02}",
+                self.world.time.days, self.world.time.hours, self.world.time.minutes
+            ));
+
+            ui.offset(Point::new(0, 1));
+
             if self.side {
                 self.virus_ui(ui);
             } else {
@@ -144,7 +157,7 @@ impl GameState for State {
                 .get(selected_person.as_ref().unwrap())
                 .unwrap();
 
-            ui.rect(25, 30, |ui| {
+            ui.rect(30, 40, |ui| {
                 if ui.mouse_click && !ui.clicked() {
                     *selected_person = None;
                 }
@@ -155,6 +168,7 @@ impl GameState for State {
                 ui.print(format!("Alive: {}", person.alive));
                 ui.print(format!("Age: {}", person.age));
                 ui.print(format!("Job: {}", person.job.ty.as_str()));
+                ui.print(format!("Employed: {}", person.job.location.is_some()));
                 ui.print(format!(
                     "Sex: {}",
                     match person.sex {

@@ -77,7 +77,7 @@ impl Ui {
             mouse_point: self.mouse_point,
             mouse_click: self.mouse_click,
             rect: Rect {
-                position: self.offset.clone(),
+                position: self.rect.position + self.offset.clone(),
                 width,
                 height,
             },
