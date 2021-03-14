@@ -5,6 +5,7 @@ use crate::server::{PlayerCommand, StateUpdate};
 use crate::ui::{DrawContext, DrawUi, Rect, Ui};
 use crate::world::World;
 use bracket_lib::prelude::*;
+use rand::prelude::*;
 use std::collections::HashMap;
 
 pub enum Ability {
@@ -264,6 +265,8 @@ impl GameState for State {
         self.world
             .render(ctx, &self.person_locations, Point::new(30, 0), self.side);
 
+        let mut rng = rand::thread_rng();
+
         let mut ui = Ui::new(
             ctx,
             Rect {
@@ -334,7 +337,7 @@ impl GameState for State {
 
                 if person.infected {
                     ui.offset(Point::new(0, 1));
-                    ui.print("INFECTED!!!");
+                    ui.print_color(DARK_RED, "INFECTED!!!");
                 }
 
                 ui.offset(Point::new(0, 1));
@@ -398,7 +401,18 @@ impl GameState for State {
                         ctx.mouse_point().x as usize - 30,
                         ctx.mouse_point().y as usize,
                     )) {
-                        self.selected_person = Some(persons[0].clone());
+                        if self.side {
+                            let infected = persons.iter().filter(|p| self.world.people[p].infected);
+
+                            self.selected_person = Some(
+                                infected
+                                    .choose(&mut rng)
+                                    .unwrap_or(persons.choose(&mut rng).unwrap())
+                                    .clone(),
+                            );
+                        } else {
+                            self.selected_person = Some(persons.choose(&mut rng).unwrap().clone());
+                        }
                     }
                 }
 
