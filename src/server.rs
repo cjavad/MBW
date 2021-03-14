@@ -395,7 +395,7 @@ impl GameSession {
                                         ));
                                     }
                                     Tile::TestCenter => {
-                                        *tile = Tile::Door(None);
+                                        *tile = Tile::Empty;
                                         updates.push(StateUpdate::TileUpdate(
                                             Position { x, y },
                                             tile.clone(),
