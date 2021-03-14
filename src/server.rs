@@ -5,6 +5,7 @@ use crate::world::World;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::Interest;
@@ -16,7 +17,7 @@ use tokio::net::{
 use tokio::time::sleep;
 
 pub struct PathCache {
-    paths: HashMap<(Position, Position), Vec<Position>>,
+    paths: HashMap<(Position, Position), Option<Vec<Position>>>,
 }
 
 impl PathCache {
@@ -33,7 +34,7 @@ impl PathCache {
 
     /// Finds a path between points and chaches the result in `paths`.
     pub fn cache_path(&mut self, map: &Map, start: Position, end: Position) {
-        let (path, _cost) = pathfinding::prelude::astar(
+        let path = pathfinding::prelude::astar(
             &end,
             |p| {
                 let mut neighbors = Vec::new();
@@ -62,15 +63,14 @@ impl PathCache {
             },
             |_| 1,
             |p| *p == start,
-        )
-        .unwrap();
+        ).map(|(p, _)| p);
 
         // hehe xD, shiz fucked, but works better than the alternative
         // double reversed order
         self.paths.insert((start, end), path);
     }
 
-    pub fn get_path(&mut self, map: &Map, start: Position, end: Position) -> &Vec<Position> {
+    pub fn get_path(&mut self, map: &Map, start: Position, end: Position) -> &Option<Vec<Position>> {
         let key = (start, end);
 
         if !self.paths.contains_key(&key) {
@@ -91,6 +91,8 @@ pub struct GameSession {
     pub people_actions: HashMap<PersonId, PersonAction>,
     pub path_cache: PathCache,
     pub receiver: Receiver<PlayerUpdate>,
+    pub test_centers: HashSet<Position>,
+    pub vaccine_centers: HashSet<Position>,
 }
 
 impl GameSession {
@@ -119,6 +121,9 @@ impl GameSession {
     pub async fn update(&mut self, rng: &mut impl Rng) -> Vec<StateUpdate> {
         self.world.time.set_minutes(self.tick_count as u32);
 
+        self.player1.money += 1;
+        self.player2.money += 1;
+
         self.handle_players().await;
 
         let mut updates = Vec::new();
@@ -133,6 +138,30 @@ impl GameSession {
             person.update_action(&self.world, &mut self.path_cache, action, rng);
         }
 
+        for test_center in &self.test_centers {
+            if let Some(persons) = person_locations.get(test_center) {
+                for person in persons {
+                    self.world.people.get_mut(person).unwrap().tested = true;
+                    updates.push(StateUpdate::PersonUpdate(PersonUpdate::Tested(
+                        person.clone(),
+                        true,
+                    )));
+                }
+            }
+        }
+
+        for vaccine_center in &self.vaccine_centers {
+            if let Some(persons) = person_locations.get(vaccine_center) {
+                for person in persons {
+                    self.world.people.get_mut(person).unwrap().vaccinated = true;
+                    updates.push(StateUpdate::PersonUpdate(PersonUpdate::Vaccinated(
+                        person.clone(),
+                        true,
+                    )));
+                }
+            }
+        }
+
         for (position, persons) in &person_locations {
             let tile = self.world.map.get_tile(position);
 
@@ -140,12 +169,12 @@ impl GameSession {
                 let other_person = self.world.people.get(other_id).unwrap().clone();
 
                 for id in persons {
-                    let mut infection_chance: f32 = 0.5;
-
                     // If it's the same person as the inital loop skip
                     if other_id == id {
                         continue;
                     }
+
+                    let mut infection_chance: f32 = 0.15;
 
                     let person = self.world.people.get_mut(id).unwrap();
 
@@ -157,11 +186,12 @@ impl GameSession {
 
                     // False sex have better immune systems than true sex
                     if !person.sex {
-                        infection_chance -= 0.1;
+                        infection_chance *= 0.9;
                     }
 
-                    // Check if you and the other people are wearing masks
-                    infection_chance /= 2.0;
+                    if person.infected && person.tested {
+                        infection_chance *= 0.05;
+                    }
 
                     // Check if you and the other people are wearing masks
                     if person.habits.mask > rng.gen_range(0.0..1.0) {
@@ -173,7 +203,7 @@ impl GameSession {
                     }
 
                     // The older you are the worse your immune system is
-                    infection_chance += (person.age as u32 / 500) as f32;
+                    infection_chance *= 1.0 + person.age as f32 / 100.0;
 
                     if person.vaccinated {
                         infection_chance *= 0.05;
@@ -209,7 +239,11 @@ impl GameSession {
                     if person.habits.socialscore > rng.gen_range(0.0..1.0)
                         && !person.habits.acquaintances.contains(other_id)
                     {
-                        person.habits.acquaintances.insert(other_id.clone());
+                        person.add_acquaintance(other_id.clone());
+                        updates.push(StateUpdate::PersonUpdate(PersonUpdate::Habits(
+                            id.clone(),
+                            person.habits.clone(),
+                        )));
                     }
                 }
             }
@@ -232,12 +266,29 @@ impl GameSession {
         let world = &mut self.world;
         let people_actions = &mut self.people_actions;
         let path_cache = &mut self.path_cache;
+        let player1 = &mut self.player1;
+        let player2 = &mut self.player2;
+        let test_centers = &mut self.test_centers;
+        let vaccine_centers = &mut self.vaccine_centers;
         self.receiver.try_iter().for_each(|update| {
             println!("{:?}", update);
 
             if update.is_valid() {
+                let money = match &update.player {
+                    Player::Player1 => &mut player1.money,
+                    Player::Player2 => &mut player2.money,
+                };
+
+                let price = update.command.price_lookup();
+
+                if *money < price {
+                    return;
+                }
+
                 match &update.command {
                     PlayerCommand::PartyImpulse(id) => {
+                        *money -= price;
+
                         let person = world.people.get(&id).unwrap();
                         let action = people_actions.get_mut(&id).unwrap();
                         let path = path_cache.get_path(
@@ -245,10 +296,12 @@ impl GameSession {
                             person.position.clone(),
                             person.home.clone(),
                         );
-                        *action = PersonAction::Walking(
-                            path.clone(),
-                            Box::new(PersonAction::Partying(300)),
-                        );
+                        if let Some(path) = path {
+                            *action = PersonAction::Walking(
+                                path.clone(),
+                                Box::new(PersonAction::Partying(300)),
+                            );
+                        }
 
                         for id in &person.habits.acquaintances {
                             let acquaintance = world.people.get(&id).unwrap();
@@ -258,16 +311,21 @@ impl GameSession {
                                 acquaintance.position.clone(),
                                 person.home.clone(),
                             );
-                            *action = PersonAction::Walking(
-                                path.clone(),
-                                Box::new(PersonAction::Partying(300)),
-                            );
+
+                            if let Some(path) = path {
+                                *action = PersonAction::Walking(
+                                    path.clone(),
+                                    Box::new(PersonAction::Partying(300)),
+                                );
+                            }
                         }
                     }
                     PlayerCommand::AntivaxCampaign(position) => {
                         if world.map.tiles[position.x][position.y]
-                            == update.command.tile_lookup().unwrap()
+                            == update.command.tile_lookup()[0]
                         {
+                            *money -= price;
+
                             world.map.tiles[position.x][position.y] = Tile::AntivaxCampain(480);
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
@@ -278,8 +336,10 @@ impl GameSession {
                     }
                     PlayerCommand::Roadblock(position) => {
                         if world.map.tiles[position.x][position.y]
-                            == update.command.tile_lookup().unwrap()
+                            == update.command.tile_lookup()[0]
                         {
+                            *money -= price;
+
                             world.map.tiles[position.x][position.y] = Tile::RoadBlock;
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
@@ -290,8 +350,10 @@ impl GameSession {
                     }
                     PlayerCommand::SocialImpulse(position) => {
                         if world.map.tiles[position.x][position.y]
-                            == update.command.tile_lookup().unwrap()
+                            == update.command.tile_lookup()[0]
                         {
+                            *money -= price;
+
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
                                 world.map.tiles[position.x][position.y],
@@ -300,6 +362,10 @@ impl GameSession {
                         }
                     }
                     PlayerCommand::EconomicCrash => {
+                        *money -= price;
+
+                        test_centers.clear();
+
                         for x in 0..world.map.width {
                             for y in 0..world.map.height {
                                 let tile = &mut world.map.tiles[x][y];
@@ -332,20 +398,24 @@ impl GameSession {
                     }
                     PlayerCommand::Testcenter(position) => {
                         if world.map.tiles[position.x][position.y]
-                            == update.command.tile_lookup().unwrap()
+                            == update.command.tile_lookup()[0]
                         {
+                            *money -= price;
+
                             world.map.tiles[position.x][position.y] = Tile::TestCenter;
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
                                 world.map.tiles[position.x][position.y],
                             ));
-                            path_cache.invalidate();
+                            test_centers.insert(position.clone());
                         }
                     }
                     PlayerCommand::Lockdown(position) => {
                         if world.map.tiles[position.x][position.y]
-                            == update.command.tile_lookup().unwrap()
+                            == update.command.tile_lookup()[0]
                         {
+                            *money -= price;
+
                             world.map.tiles[position.x][position.y] = Tile::Door(Some(1440));
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
@@ -356,20 +426,25 @@ impl GameSession {
                     }
                     PlayerCommand::Vaccinecenter(position) => {
                         if world.map.tiles[position.x][position.y]
-                            == update.command.tile_lookup().unwrap()
+                            == update.command.tile_lookup()[0]
                         {
+                            *money -= price;
+
                             world.map.tiles[position.x][position.y] = Tile::VaccineCenter;
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
                                 world.map.tiles[position.x][position.y],
                             ));
-                            path_cache.invalidate();
+
+                            vaccine_centers.insert(position.clone());
                         }
                     }
                     PlayerCommand::MaskCampaign(position) => {
                         if world.map.tiles[position.x][position.y]
-                            == update.command.tile_lookup().unwrap()
+                            == update.command.tile_lookup()[0]
                         {
+                            *money -= price;
+
                             world.map.tiles[position.x][position.y] = Tile::MaskCampain(480);
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
@@ -385,10 +460,17 @@ impl GameSession {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Player {
+    Player1,
+    Player2,
+}
+
 pub struct PlayerSession {
     socket: OwnedWriteHalf,
     side: bool,
     created: bool,
+    money: u32,
 }
 
 impl PlayerSession {
@@ -397,6 +479,7 @@ impl PlayerSession {
             socket,
             side,
             created: true,
+            money: 0,
         }
     }
 }
@@ -420,18 +503,25 @@ pub struct NetworkPayload {
     pub tick_rate: u8,
     /// The side the player is on
     pub side: bool,
+    /// The amount of the players owns
+    pub money: u32,
     /// Vector for PersonUpdate(s)
     pub updates: Vec<StateUpdate>,
 }
 
 impl NetworkPayload {
-    pub fn create(session: &GameSession, player_session: &PlayerSession, updates: Vec<StateUpdate>) -> Self {
+    pub fn create(
+        session: &GameSession,
+        player_session: &PlayerSession,
+        updates: Vec<StateUpdate>,
+    ) -> Self {
         NetworkPayload {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
             side: player_session.side,
+            money: player_session.money,
             tick_count: session.tick_count,
             age: session.age,
             tick_rate: session.tick_rate,
@@ -458,7 +548,7 @@ impl PlayerCommand {
         match self {
             PlayerCommand::PartyImpulse(_) => side == true,
             PlayerCommand::AntivaxCampaign(_) => side == true,
-            PlayerCommand::Roadblock(_) => side == true,
+            PlayerCommand::Roadblock(_) => true,
             PlayerCommand::SocialImpulse(_) => side == true,
             PlayerCommand::EconomicCrash => side == true,
             PlayerCommand::Testcenter(_) => side == false,
@@ -469,29 +559,29 @@ impl PlayerCommand {
         }
     }
 
-    pub fn tile_lookup(&self) -> Option<Tile> {
+    pub fn tile_lookup(&self) -> &[Tile] {
         match self {
-            PlayerCommand::PartyImpulse(_) => Some(Tile::Empty),
-            PlayerCommand::AntivaxCampaign(_) => Some(Tile::Empty),
-            PlayerCommand::Roadblock(_) => Some(Tile::Empty),
-            PlayerCommand::SocialImpulse(_) => Some(Tile::Empty),
-            PlayerCommand::EconomicCrash => None,
-            PlayerCommand::Testcenter(_) => Some(Tile::Door(None)),
-            PlayerCommand::Lockdown(_) => Some(Tile::Door(None)),
-            PlayerCommand::Vaccinecenter(_) => Some(Tile::Empty),
-            PlayerCommand::MaskCampaign(_) => Some(Tile::Empty),
+            PlayerCommand::PartyImpulse(_) => &[Tile::Empty],
+            PlayerCommand::AntivaxCampaign(_) => &[Tile::Empty],
+            PlayerCommand::Roadblock(_) => &[Tile::Empty],
+            PlayerCommand::SocialImpulse(_) => &[Tile::Empty],
+            PlayerCommand::EconomicCrash => &[],
+            PlayerCommand::Testcenter(_) => &[Tile::Empty],
+            PlayerCommand::Lockdown(_) => &[Tile::Door(None)],
+            PlayerCommand::Vaccinecenter(_) => &[Tile::Empty],
+            PlayerCommand::MaskCampaign(_) => &[Tile::Empty],
         }
     }
 
     pub fn price_lookup(&self) -> u32 {
         match self {
-            PlayerCommand::PartyImpulse(_) => 200,
+            PlayerCommand::PartyImpulse(_) => 400,
             PlayerCommand::AntivaxCampaign(_) => 800,
-            PlayerCommand::Roadblock(_) => 60,
-            PlayerCommand::SocialImpulse(_) => 120,
+            PlayerCommand::Roadblock(_) => 80,
+            PlayerCommand::SocialImpulse(_) => 240,
             PlayerCommand::EconomicCrash => 1500,
-            PlayerCommand::Testcenter(_) => 1000,
-            PlayerCommand::Lockdown(_) => 70,
+            PlayerCommand::Testcenter(_) => 500,
+            PlayerCommand::Lockdown(_) => 100,
             PlayerCommand::Vaccinecenter(_) => 1200,
             PlayerCommand::MaskCampaign(_) => 400,
         }
@@ -502,6 +592,7 @@ impl PlayerCommand {
 pub struct PlayerUpdate {
     side: bool,
     command: PlayerCommand,
+    player: Player,
 }
 
 impl PlayerUpdate {
@@ -511,6 +602,7 @@ impl PlayerUpdate {
 }
 
 async fn server_listener(
+    player: Player,
     sender: Sender<PlayerUpdate>,
     mut read: OwnedReadHalf,
     side: bool,
@@ -522,7 +614,13 @@ async fn server_listener(
         read.read_exact(&mut data).await?;
         let command: PlayerCommand = bincode::deserialize(&data).unwrap();
 
-        sender.send(PlayerUpdate { side, command }).unwrap();
+        sender
+            .send(PlayerUpdate {
+                side,
+                command,
+                player: player.clone(),
+            })
+            .unwrap();
     }
 }
 
@@ -559,19 +657,31 @@ async fn server_run_game(
 
     // Game logic
     let (sender, receiver) = channel();
-    tokio::spawn(server_listener(sender.clone(), player1_read, player1.side));
-    tokio::spawn(server_listener(sender, player2_read, player2.side));
+    tokio::spawn(server_listener(
+        Player::Player1,
+        sender.clone(),
+        player1_read,
+        player1.side,
+    ));
+    tokio::spawn(server_listener(
+        Player::Player2,
+        sender,
+        player2_read,
+        player2.side,
+    ));
 
     let mut session = GameSession {
         player1,
         player2,
-        tick_count: 600,
+        tick_count: 120,
         tick_rate: 10,
         age: 0,
         world,
         people_actions,
         path_cache: PathCache::new(),
         receiver,
+        test_centers: HashSet::new(),
+        vaccine_centers: HashSet::new(),
     };
 
     session

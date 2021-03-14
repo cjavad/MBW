@@ -131,17 +131,27 @@ impl World {
             })
             .collect();
 
-        for _ in 0..10 {
-            people.values_mut().choose(rng).unwrap().infected = true;
-        }
+        let ids = people.keys().map(|k| k.clone()).collect::<Vec<_>>();
 
-        // add acquaintances based on homes
-        for (id, person) in &mut people {
-            for aq in &homes[&person.home] {
-                if id != aq {
-                    person.add_acquaintance(aq.clone());
+        for id in &ids {
+            for _ in 0..rng.gen_range(2..5) {
+                let other_id = ids.choose(rng).unwrap();
+
+                if id != other_id {
+                    people
+                        .get_mut(id)
+                        .unwrap()
+                        .add_acquaintance(other_id.clone());
+                    people
+                        .get_mut(other_id)
+                        .unwrap()
+                        .add_acquaintance(id.clone());
                 }
             }
+        }
+
+        for _ in 0..10 {
+            people.values_mut().choose(rng).unwrap().infected = true;
         }
 
         Self {
@@ -158,13 +168,14 @@ impl World {
         ctx: &mut BTerm,
         person_locations: &HashMap<Position, Vec<PersonId>>,
         offset: Point,
+        side: bool,
     ) {
         self.map.render(ctx, offset);
 
         for (location, persons) in person_locations {
             let sick = persons
                 .iter()
-                .map(|p| self.people[p].infected as i32 as f32)
+                .map(|p| (self.people[p].infected && (side || self.people[p].tested)) as i32 as f32)
                 .sum::<f32>()
                 / persons.len() as f32;
 

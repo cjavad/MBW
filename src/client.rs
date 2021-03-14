@@ -1,8 +1,11 @@
 use crate::server::{NetworkPayload, PlayerCommand};
 use crate::state;
 use bracket_lib::prelude::*;
+use rodio::Source;
 use std::error::Error;
+use std::fs::File;
 use std::io;
+use std::io::BufReader;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use tokio::io::Interest;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -84,6 +87,15 @@ pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static +
     let player_handle = PlayerCommandHandle {
         sender: player_sender,
     };
+
+    /*
+    let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+
+    // Load a sound from a file, using a path relative to Cargo.toml
+    let reader = std::io::Cursor::new(include_bytes!("music.mp3"));
+    let source = rodio::Decoder::new_mp3(reader).unwrap();
+    stream_handle.play_raw(source.convert_samples())?;
+    */
 
     // Connect to server
     tokio::spawn(client_main(ip, client_sender, player_receiver));

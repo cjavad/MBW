@@ -32,6 +32,9 @@ pub enum PersonUpdate {
     LifeStatus(PersonId, bool),
     Position(PersonId, Position),
     Infected(PersonId, bool),
+    Habits(PersonId, PersonHabits),
+    Tested(PersonId, bool),
+    Vaccinated(PersonId, bool),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -61,6 +64,7 @@ pub struct Person {
     pub infected: bool,
     pub tick_infected: u64,
     pub tick_last_touched: u64,
+    pub tested: bool,
     pub vaccinated: bool,
     pub first_name: String,
     pub last_name: String,
@@ -123,6 +127,7 @@ impl Person {
             alive: true,
             infected: false,
             vaccinated: false,
+            tested: false,
             tick_infected: 0,
             tick_last_touched: 0,
             first_name: FIRST_NAMES.choose(rng).unwrap().to_string(),
@@ -166,6 +171,7 @@ impl Person {
                         && world.time.hours < work_hours.end
                         // add some random chance, so everyone doesn't leave at excatly the same time
                         && rng.gen_range(0..10) == 0
+                        && !(self.tested && self.infected)
                     {
                         let path = path_cache.get_path(
                             &world.map,
@@ -173,8 +179,10 @@ impl Person {
                             job_location.clone(),
                         );
 
-                        *action =
-                            PersonAction::Walking(path.clone(), Box::new(PersonAction::Working));
+                        if let Some(path) = path {
+                            *action =
+                                PersonAction::Walking(path.clone(), Box::new(PersonAction::Working));
+                        }
                     } else if world.time.hours >= work_hours.end {
                         // randomly go shopping
                         if rng.gen_range(0..1000) == 0 {
@@ -185,12 +193,14 @@ impl Person {
                                     shops.choose(rng).unwrap().clone(),
                                 );
 
-                                *action = PersonAction::Walking(
-                                    path.clone(),
-                                    Box::new(PersonAction::Shopping(
-                                        world.time.to_minutes() + rng.gen_range(90..120),
-                                    )),
-                                );
+                                if let Some(path) = path {
+                                    *action = PersonAction::Walking(
+                                        path.clone(),
+                                        Box::new(PersonAction::Shopping(
+                                            world.time.to_minutes() + rng.gen_range(90..120),
+                                        )),
+                                    );
+                                }
                             }
                         }
                     }
@@ -209,7 +219,9 @@ impl Person {
                     let path =
                         path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
 
-                    *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                    if let Some(path) = path {
+                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                    }
                 }
             }
             PersonAction::Shopping(time) => {
@@ -217,16 +229,20 @@ impl Person {
                     let path =
                         path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
 
-                    *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                    if let Some(path) = path {
+                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                    }
                 }
             }
             PersonAction::Partying(time) => {
-                *time -= 1;
+                let _ = time.saturating_sub(1);
                 if *time == 0 {
                     let path =
                         path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
 
-                    *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                    if let Some(path) = path {
+                        *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                    }
                 }
             }
         }

@@ -35,6 +35,7 @@ pub struct State {
     pub side: bool,
     pub width: usize,
     pub height: usize,
+    pub money: u32,
     pub world: World,
     pub handle: ClientNetworkHandle,
     pub command_handle: PlayerCommandHandle,
@@ -49,6 +50,7 @@ impl State {
             side: true,
             width: crate::MAP_WIDTH_CHUNKS * 6,
             height: crate::MAP_HEIGHT_CHUNKS * 6,
+            money: 0,
             world: World::empty(crate::MAP_WIDTH_CHUNKS, crate::MAP_HEIGHT_CHUNKS),
             handle,
             command_handle,
@@ -79,6 +81,7 @@ impl State {
             );
 
             self.side = payload.side;
+            self.money = payload.money;
 
             // TODO: networking stuff with time and stuff
 
@@ -95,6 +98,15 @@ impl State {
                         }
                         PersonUpdate::LifeStatus(id, is_alive) => {
                             self.world.people.get_mut(&id).unwrap().alive = is_alive;
+                        }
+                        PersonUpdate::Habits(id, habits) => {
+                            self.world.people.get_mut(&id).unwrap().habits = habits;
+                        }
+                        PersonUpdate::Tested(id, tested) => {
+                            self.world.people.get_mut(&id).unwrap().tested = tested;
+                        }
+                        PersonUpdate::Vaccinated(id, vaccinated) => {
+                            self.world.people.get_mut(&id).unwrap().vaccinated = vaccinated;
                         }
                     },
                     StateUpdate::TileUpdate(position, tile) => {
@@ -150,6 +162,20 @@ impl State {
         ui.offset(Point::new(0, 1));
         ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
             ui.offset(Point::new(1, 1));
+            ui.print("Social Impulse");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::SocialImpulse(Default::default()).price_lookup()
+            ));
+
+            if ui.clicked() {
+                self.selected_ability = Some(Ability::SocialImpulse);
+            }
+        });
+
+        ui.offset(Point::new(0, 1));
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
+            ui.offset(Point::new(1, 1));
             ui.print("Economic Crash");
             ui.print(format!(
                 "Cost: {}",
@@ -158,6 +184,72 @@ impl State {
 
             if ui.clicked() {
                 self.command_handle.send(PlayerCommand::EconomicCrash);
+            }
+        });
+    }
+
+    pub fn president_ui(&mut self, ui: &mut Ui) {
+        ui.print("PRECIDENT:");
+        ui.print(" Your job is to keep");
+        ui.print(" the city from being");
+        ui.print(" INFECTED.");
+
+        ui.offset(Point::new(0, 1));
+        ui.print("Abilities:");
+
+        ui.offset(Point::new(1, 1));
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
+            ui.offset(Point::new(1, 1));
+            ui.print("Roadblock");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::Roadblock(Default::default()).price_lookup()
+            ));
+
+            if ui.clicked() {
+                self.selected_ability = Some(Ability::Roadblock);
+            }
+        });
+
+        ui.offset(Point::new(0, 1));
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
+            ui.offset(Point::new(1, 1));
+            ui.print("Mask Campaign");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::MaskCampaign(Default::default()).price_lookup()
+            ));
+
+            if ui.clicked() {
+                self.selected_ability = Some(Ability::MaskCampain);
+            }
+        });
+
+        ui.offset(Point::new(0, 1));
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
+            ui.offset(Point::new(1, 1));
+            ui.print("Testcenter");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::Testcenter(Default::default()).price_lookup()
+            ));
+
+            if ui.clicked() {
+                self.selected_ability = Some(Ability::Testcenter);
+            }
+        });
+
+        ui.offset(Point::new(0, 1));
+        ui.rect(Self::ABILITY_RECT_WIDTH, 6, |ui| {
+            ui.offset(Point::new(1, 1));
+            ui.print("Vaccinecenter");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::Vaccinecenter(Default::default()).price_lookup()
+            ));
+
+            if ui.clicked() {
+                self.selected_ability = Some(Ability::Vaccinecenter);
             }
         });
     }
@@ -170,7 +262,7 @@ impl GameState for State {
         self.handle_payloads();
         self.update_person_locations();
         self.world
-            .render(ctx, &self.person_locations, Point::new(30, 0));
+            .render(ctx, &self.person_locations, Point::new(30, 0), self.side);
 
         let mut ui = Ui::new(
             ctx,
@@ -188,12 +280,14 @@ impl GameState for State {
                 "Time: {:#02}:{:#02}:{:#02}",
                 self.world.time.days, self.world.time.hours, self.world.time.minutes
             ));
+            ui.print(format!("Money: {}$", self.money,));
 
             ui.offset(Point::new(0, 1));
 
             if self.side {
                 self.virus_ui(ui);
             } else {
+                self.president_ui(ui);
             }
 
             if let Some(ability) = &self.selected_ability {
@@ -234,6 +328,8 @@ impl GameState for State {
                         false => "Female",
                     }
                 ));
+                ui.print(format!("Tested: {}", person.tested));
+                ui.print(format!("Vaccinated: {}", person.vaccinated));
                 ui.print(format!(""));
 
                 if person.infected {
