@@ -84,7 +84,6 @@ pub async fn run(ip: String) -> Result<(), Box<dyn std::error::Error + 'static +
 
     // init game state
     let state = state::State::new(client_handle);
-    player_handle.sender.send(PlayerCommand::Lockdown).unwrap();
 
     // run main loop
     main_loop(ctx, state)

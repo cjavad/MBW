@@ -181,6 +181,7 @@ impl GameSession {
                             id.clone(),
                             person.infected,
                         )));
+
                     // If you have been infected for more than a week
                     } else if person.infected && self.tick_count - person.tick_infected > 604800 {
                         // If true, die, otherwise live.
@@ -282,15 +283,15 @@ impl NetworkPayload {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PlayerCommand {
-    PartyImpulse(Position),
-    AntivaxCampaign(Position),
-    Roadblock(Position),
-    SocialImpulse(Position),
-    EconomicCrash,
-    Testcenter(Position),
-    Lockdown,
-    Vaccinecenter(Position),
-    MaskCampaign(Position),
+    PartyImpulse(Position), // Placing a party impulse makes all the people connected to it (employes and acquaintances) come together
+    AntivaxCampaign(Position), // Sets Person.vaccine to -1 (no more vaccines) and lowers Person.habits.mask to 0
+    Roadblock(Position), // Disable routes to test centers or any other place for that matter (at position)
+    SocialImpulse(Position), // Creates hotspot at Position people will flock about, increases habits.acquaintances
+    EconomicCrash, // Disables test centers and mask campaigns (also antivaccampaigns and partyimpulse)
+    Testcenter(Position), // Puts household and acquaintances in lockdown if postive, increases Person.habits.hygiene
+    Lockdown(Position), // People in door (building) are stuck
+    Vaccinecenter(Position), // Sets Person.vaccine to 1 when person passes position
+    MaskCampaign(Position), // Sets Person.habits.mask to 1 when person passses positions
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -308,7 +309,7 @@ impl PlayerUpdate {
             PlayerCommand::SocialImpulse(Position) => self.side == true,
             PlayerCommand::EconomicCrash => self.side == true,
             PlayerCommand::Testcenter(Position) => self.side == false,
-            PlayerCommand::Lockdown => self.side == false,
+            PlayerCommand::Lockdown(Position) => self.side == false,
             PlayerCommand::Vaccinecenter(Position) => self.side == false,
             PlayerCommand::MaskCampaign(Position) => self.side == false,
             _ => false,
@@ -323,7 +324,7 @@ impl PlayerUpdate {
             PlayerCommand::SocialImpulse(Position) => Some(Tile::Empty),
             PlayerCommand::EconomicCrash => None,
             PlayerCommand::Testcenter(Position) => Some(Tile::Empty),
-            PlayerCommand::Lockdown => None,
+            PlayerCommand::Lockdown => Some(Tile::Door),
             PlayerCommand::Vaccinecenter(Position) => Some(Tile::Empty),
             PlayerCommand::MaskCampaign(Position) => Some(Tile::Empty),
             _ => None,
