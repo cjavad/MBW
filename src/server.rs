@@ -99,12 +99,17 @@ impl GameSession {
         updates: Vec<StateUpdate>,
     ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
         // Create payload
-        let network_payload = NetworkPayload::create(&self, updates);
+        let network_payload = NetworkPayload::create(&self, &self.player1, updates.clone());
         let serialized_payload = bincode::serialize(&network_payload).unwrap();
         let payload_size = (serialized_payload.len() as u32).to_be_bytes();
 
         self.player1.socket.write_all(&payload_size).await?;
         self.player1.socket.write_all(&serialized_payload).await?;
+
+        let network_payload = NetworkPayload::create(&self, &self.player2, updates);
+        let serialized_payload = bincode::serialize(&network_payload).unwrap();
+        let payload_size = (serialized_payload.len() as u32).to_be_bytes();
+
         self.player2.socket.write_all(&payload_size).await?;
         self.player2.socket.write_all(&serialized_payload).await?;
 
@@ -228,6 +233,8 @@ impl GameSession {
         let people_actions = &mut self.people_actions;
         let path_cache = &mut self.path_cache;
         self.receiver.try_iter().for_each(|update| {
+            println!("{:?}", update);
+
             if update.is_valid() {
                 match &update.command {
                     PlayerCommand::PartyImpulse(id) => {
@@ -397,7 +404,6 @@ impl PlayerSession {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum StateUpdate {
     SetWorld(World),
-    SetSide(bool),
     TileUpdate(Position, Tile),
     PersonUpdate(PersonUpdate),
 }
@@ -412,17 +418,20 @@ pub struct NetworkPayload {
     pub age: u64,
     /// Server tickrate
     pub tick_rate: u8,
+    /// The side the player is on
+    pub side: bool,
     /// Vector for PersonUpdate(s)
     pub updates: Vec<StateUpdate>,
 }
 
 impl NetworkPayload {
-    pub fn create(session: &GameSession, updates: Vec<StateUpdate>) -> Self {
+    pub fn create(session: &GameSession, player_session: &PlayerSession, updates: Vec<StateUpdate>) -> Self {
         NetworkPayload {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
+            side: player_session.side,
             tick_count: session.tick_count,
             age: session.age,
             tick_rate: session.tick_rate,

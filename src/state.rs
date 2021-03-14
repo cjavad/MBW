@@ -78,6 +78,8 @@ impl State {
                 self.world.time.days, self.world.time.hours, self.world.time.minutes
             );
 
+            self.side = payload.side;
+
             // TODO: networking stuff with time and stuff
 
             for update in payload.updates {
@@ -98,7 +100,6 @@ impl State {
                     StateUpdate::TileUpdate(position, tile) => {
                         self.world.map.tiles[position.x][position.y] = tile;
                     }
-                    StateUpdate::SetSide(side) => self.side = side,
                     StateUpdate::SetWorld(new_world) => self.world = new_world,
                 }
             }
@@ -138,7 +139,12 @@ impl State {
                 PlayerCommand::PartyImpulse(Default::default()).price_lookup()
             ));
 
-            
+            if ui.clicked() {
+                if let Some(selected_person) = &self.selected_person {
+                    self.command_handle
+                        .send(PlayerCommand::PartyImpulse(selected_person.clone()));
+                }
+            }
         });
 
         ui.offset(Point::new(0, 1));
@@ -194,7 +200,7 @@ impl GameState for State {
                 ui.offset(Point::new(0, 2));
                 ui.print("Selected:");
                 ui.print(format!(" {}", ability.as_str()));
-            } 
+            }
         });
 
         ui.set_offset(Point::new(30, 0));
@@ -269,8 +275,7 @@ impl GameState for State {
                                 .send(PlayerCommand::AntivaxCampaign(position));
                         }
                         Ability::Roadblock => {
-                            self.command_handle
-                                .send(PlayerCommand::Roadblock(position));
+                            self.command_handle.send(PlayerCommand::Roadblock(position));
                         }
                         Ability::SocialImpulse => {
                             self.command_handle
@@ -281,8 +286,7 @@ impl GameState for State {
                                 .send(PlayerCommand::Testcenter(position));
                         }
                         Ability::Lockdown => {
-                            self.command_handle
-                                .send(PlayerCommand::Lockdown(position));
+                            self.command_handle.send(PlayerCommand::Lockdown(position));
                         }
                         Ability::Vaccinecenter => {
                             self.command_handle
