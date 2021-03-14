@@ -520,10 +520,10 @@ impl GameSession {
 
         if self.world.time.days > 3 {
             if all_total as f32 / all_infected as f32 >= 2.0 {
-                self.send_playload(vec![StateUpdate::Winner(true)]).await;
+                self.send_playload(vec![StateUpdate::Winner(true)]).await.unwrap();
                 Some(true)
             } else {
-                self.send_playload(vec![StateUpdate::Winner(false)]).await;
+                self.send_playload(vec![StateUpdate::Winner(false)]).await.unwrap();
                 Some(false)
             }
         } else {

@@ -92,10 +92,7 @@ impl World {
             .map(|(x, c)| c.iter().enumerate().map(move |(y, t)| (x.clone(), y, t)))
             .flatten()
             .filter_map(|(x, y, t)| match t {
-                Tile::Door(location, _) => {
-                    println!("{:?}", location);
-                    Some((Position::new(x, y), location.clone()))
-                }
+                Tile::Door(location, _) => Some((Position::new(x, y), location.clone())),
                 _ => None,
             })
             .collect::<HashMap<_, _>>();
