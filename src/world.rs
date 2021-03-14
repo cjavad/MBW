@@ -22,26 +22,55 @@ impl Location {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Time {
+    pub minutes: u32,
+    pub hours: u32,
+    pub days: u8,
+}
+
+impl Time {
+    pub fn new() -> Self {
+        Self {
+            minutes: 0,
+            hours: 0,
+            days: 0,
+        }
+    }
+
+    pub fn set_minutes(&mut self, minutes: u32) {
+        self.minutes = minutes;
+
+        self.hours = (self.minutes / 60) as u32;
+        self.minutes = self.minutes % 60;
+
+        self.days = (self.hours / 24) as u8;
+        self.hours = self.hours % 24;
+    }
+
+    pub fn to_minutes(&self) -> u32 {
+        self.minutes + self.hours * 60 + self.days as u32 * 60 * 24
+    }
+}
+
 /// Incapsulates the entire simulated world.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
-    pub minutes: u32,
-    pub hours: u8,
-    pub days: u8,
+    pub time: Time,
     pub map: Map,
     pub locations: HashMap<Position, Location>,
     pub people: HashMap<person::PersonId, person::Person>,
+    pub job_locations: HashMap<person::JobType, Vec<Position>>,
 }
 
 impl World {
     pub fn empty(chunks_w: usize, chunks_h: usize) -> Self {
         Self {
-            minutes: 0,
-            hours: 0,
-            days: 0,
+            time: Time::new(),
             map: Map::fill(chunks_w * 6, chunks_h * 6, Tile::Empty),
             locations: HashMap::new(),
             people: HashMap::new(),
+            job_locations: HashMap::new(),
         }
     }
 
@@ -69,9 +98,12 @@ impl World {
             .filter_map(|(position, location)| match location {
                 Location::Home => Some((position.clone(), Vec::new())),
                 Location::Job(job) => {
-                    jobs.entry(job).or_insert(Vec::new()).push(position.clone());
+                    jobs.entry(job.clone())
+                        .or_insert(Vec::new())
+                        .push(position.clone());
                     None
                 }
+                _ => None,
             })
             .collect::<HashMap<_, _>>();
 
@@ -113,25 +145,12 @@ impl World {
         }
 
         Self {
-            minutes: 0,
-            hours: 0,
-            days: 0,
+            time: Time::new(),
             map,
             locations,
             people,
+            job_locations: jobs,
         }
-    }
-
-    pub fn set_time(&mut self, age: u64) {
-        const MINUTES_PER_AGE: u32 = 10;
-
-        self.minutes = age as u32 * MINUTES_PER_AGE;
-
-        self.hours = (self.minutes / 60) as u8;
-        self.minutes = self.minutes % 60;
-
-        self.days = self.hours / 24;
-        self.hours = self.hours % 24;
     }
 
     pub fn render(

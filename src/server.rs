@@ -112,7 +112,7 @@ impl GameSession {
     }
 
     pub async fn update(&mut self, rng: &mut impl Rng) -> Vec<WorldUpdate> {
-        self.world.set_time(self.age);
+        self.world.time.set_minutes(self.tick_count as u32);
 
         self.handle_players().await;
 
@@ -125,7 +125,7 @@ impl GameSession {
                 .entry(person.position.clone())
                 .or_insert(Vec::new())
                 .push(id.clone());
-            person.update_action(&self.world, &mut self.path_cache, action);
+            person.update_action(&self.world, &mut self.path_cache, action, rng);
         }
 
         for (position, persons) in &person_locations {

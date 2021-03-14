@@ -18,6 +18,7 @@ pub enum Tile {
     Empty,
     Building,
     Door,
+    RoadBlock,
 }
 
 impl Tile {
@@ -26,6 +27,7 @@ impl Tile {
             Tile::Empty => {}
             Tile::Building => ctx.print_color(point.x, point.y, DARKOLIVEGREEN4, BLACK, "#"),
             Tile::Door => ctx.print_color(point.x, point.y, BURLYWOOD, BLACK, "["),
+            Tile::RoadBlock => ctx.print_color(point.x, point.y, GRAY, BLACK, "X"),
         }
     }
 }

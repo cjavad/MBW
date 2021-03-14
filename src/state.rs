@@ -41,11 +41,11 @@ impl State {
 
     pub fn handle_payloads(&mut self) {
         for payload in self.handle.get_payloads() {
-            self.world.set_time(payload.age);
+            self.world.time.set_minutes(payload.tick_count as u32);
 
             println!(
                 "days: {}, hours: {}, min: {}",
-                self.world.days, self.world.hours, self.world.minutes
+                self.world.time.days, self.world.time.hours, self.world.time.minutes
             );
 
             // TODO: networking stuff with time and stuff
@@ -124,7 +124,8 @@ impl GameState for State {
                 }
 
                 ui.offset(Point::new(0, 1));
-                ui.print("Acquaintances");
+                ui.print("Acquaintances:");
+                ui.offset(Point::new(1, 1));
 
                 for aq in &person.habits.acquaintances {
                     ui.text(

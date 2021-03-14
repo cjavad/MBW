@@ -1,7 +1,7 @@
 use crate::map::{Map, Position};
 use crate::names::{FIRST_NAMES, LAST_NAMES};
 use crate::server::{GameSession, PathCache};
-use crate::world::World;
+use crate::world::{Time, World};
 use bracket_lib::prelude::*;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -40,6 +40,7 @@ pub struct PersonId(pub u32);
 pub enum PersonAction {
     Working,
     Walking(Vec<Position>, Box<PersonAction>),
+    Shopping(u32),
     AtHome,
 }
 
@@ -69,7 +70,7 @@ pub struct Person {
 }
 
 impl JobType {
-    pub fn work_hours(&self) -> Range<u8> {
+    pub fn work_hours(&self) -> Range<u32> {
         match self {
             JobType::Doctor => 9..17,
             JobType::Programmer => 12..22,
@@ -149,21 +150,40 @@ impl Person {
         world: &World,
         path_cache: &mut PathCache,
         action: &mut PersonAction,
+        rng: &mut impl Rng,
     ) {
         match action {
             PersonAction::AtHome => {
                 let work_hours = self.job.ty.work_hours();
 
                 if let Some(job_location) = &self.job.location {
-                    if world.hours >= work_hours.start && world.hours < work_hours.end {
+                    if world.time.hours >= work_hours.start && world.time.hours < work_hours.end {
                         let path = path_cache.get_path(
                             &world.map,
-                            self.home.clone(),
+                            self.position.clone(),
                             job_location.clone(),
                         );
 
                         *action =
                             PersonAction::Walking(path.clone(), Box::new(PersonAction::Working));
+                    } else if world.time.hours >= work_hours.end {
+                        // randomly go shopping
+                        if rng.gen_range(0..1000) == 0 {
+                            if let Some(shops) = world.job_locations.get(&JobType::Clerk) {
+                                let path = path_cache.get_path(
+                                    &world.map,
+                                    self.position.clone(),
+                                    shops.choose(rng).unwrap().clone(),
+                                );
+
+                                *action = PersonAction::Walking(
+                                    path.clone(),
+                                    Box::new(PersonAction::Shopping(
+                                        world.time.to_minutes() + rng.gen_range(90..120),
+                                    )),
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -175,17 +195,19 @@ impl Person {
             PersonAction::Working => {
                 let work_hours = self.job.ty.work_hours();
 
-                if let Some(job_location) = &self.job.location {
-                    if world.hours >= work_hours.end {
-                        let path = path_cache.get_path(
-                            &world.map,
-                            job_location.clone(),
-                            self.home.clone(),
-                        );
+                if world.time.hours >= work_hours.end {
+                    let path =
+                        path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
 
-                        *action =
-                            PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
-                    }
+                    *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                }
+            }
+            PersonAction::Shopping(time) => {
+                if world.time.to_minutes() > *time {
+                    let path =
+                        path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
+
+                    *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
                 }
             }
         }
@@ -200,6 +222,7 @@ impl Person {
                 Some(PersonUpdate::Position(id, self.position.clone()))
             }
             PersonAction::Working => None,
+            PersonAction::Shopping(_) => None,
         }
     }
 }
