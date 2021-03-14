@@ -289,7 +289,7 @@ pub enum PlayerCommand {
     SocialImpulse(Position), // Creates hotspot at Position people will flock about, increases habits.acquaintances
     EconomicCrash, // Disables test centers and mask campaigns (also antivaccampaigns and partyimpulse)
     Testcenter(Position), // Puts household and acquaintances in lockdown if postive, increases Person.habits.hygiene
-    Lockdown(Position), // People in door (building) are stuck
+    Lockdown(Position),   // People in door (building) are stuck
     Vaccinecenter(Position), // Sets Person.vaccine to 1 when person passes position
     MaskCampaign(Position), // Sets Person.habits.mask to 1 when person passses positions
 }
@@ -323,8 +323,8 @@ impl PlayerCommand {
             PlayerCommand::Roadblock(_) => Some(Tile::Empty),
             PlayerCommand::SocialImpulse(_) => Some(Tile::Empty),
             PlayerCommand::EconomicCrash => None,
-            PlayerCommand::Testcenter(_) => Some(Tile::Door),
-            PlayerCommand::Lockdown(_) => Some(Tile::Door),
+            PlayerCommand::Testcenter(_) => Some(Tile::Door(None)),
+            PlayerCommand::Lockdown(_) => Some(Tile::Door(None)),
             PlayerCommand::Vaccinecenter(_) => Some(Tile::Empty),
             PlayerCommand::MaskCampaign(_) => Some(Tile::Empty),
         }

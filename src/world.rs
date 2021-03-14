@@ -85,7 +85,7 @@ impl World {
             .map(|(x, c)| c.iter().enumerate().map(move |(y, t)| (x.clone(), y, t)))
             .flatten()
             .filter_map(|(x, y, t)| match t {
-                Tile::Door => Some((Position::new(x, y), Location::generate(rng))),
+                Tile::Door(_) => Some((Position::new(x, y), Location::generate(rng))),
                 _ => None,
             })
             .collect::<HashMap<_, _>>();

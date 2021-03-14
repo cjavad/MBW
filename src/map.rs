@@ -1,7 +1,7 @@
 use bracket_lib::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Position {
     pub x: usize,
     pub y: usize,
@@ -17,8 +17,12 @@ impl Position {
 pub enum Tile {
     Empty,
     Building,
-    Door,
+    Door(Option<u32>),
     RoadBlock,
+    TestCenter,
+    VaccineCenter,
+    MaskCampain(u32),
+    AntivaxCampain(u32),
 }
 
 impl Tile {
@@ -26,8 +30,12 @@ impl Tile {
         match self {
             Tile::Empty => {}
             Tile::Building => ctx.print_color(point.x, point.y, DARKOLIVEGREEN4, BLACK, "#"),
-            Tile::Door => ctx.print_color(point.x, point.y, BURLYWOOD, BLACK, "["),
+            Tile::Door(lockdown) => ctx.print_color(point.x, point.y, BURLYWOOD, BLACK, "["),
             Tile::RoadBlock => ctx.print_color(point.x, point.y, GRAY, BLACK, "X"),
+            Tile::TestCenter => ctx.print_color(point.x, point.y, PURPLE, BLACK, "T"),
+            Tile::VaccineCenter => ctx.print_color(point.x, point.y, GREEN, BLACK, "V"),
+            Tile::MaskCampain(_) => ctx.print_color(point.x, point.y, GOLD, BLACK, "M"),
+            Tile::AntivaxCampain(_) => ctx.print_color(point.x, point.y, RED, BLACK, "A"),
         }
     }
 }
@@ -69,7 +77,9 @@ impl Map {
         if self.in_bounds(position) {
             match self.tiles[position.x][position.y] {
                 Tile::Empty => true,
-                Tile::Door => true,
+                Tile::Door(lockdown) => lockdown.is_none(),
+                Tile::TestCenter => true,
+                Tile::VaccineCenter => true,
                 _ => false,
             }
         } else {

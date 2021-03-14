@@ -1,7 +1,7 @@
 use crate::client::{ClientNetworkHandle, PlayerCommandHandle};
 use crate::map::Position;
 use crate::person::{PersonId, PersonUpdate};
-use crate::server::{StateUpdate, PlayerCommand};
+use crate::server::{PlayerCommand, StateUpdate};
 use crate::ui::{DrawContext, DrawUi, Rect, Ui};
 use crate::world::World;
 use bracket_lib::prelude::*;
@@ -88,21 +88,30 @@ impl State {
         ui.rect(15, 6, |ui| {
             ui.offset(Point::new(1, 1));
             ui.print("Barricade");
-            ui.print("Cost: 60");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::Roadblock(Default::default()).price_lookup()
+            ));
         });
 
         ui.offset(Point::new(0, 1));
         ui.rect(15, 6, |ui| {
             ui.offset(Point::new(1, 1));
-            ui.print("Party");
-            ui.print("Cost: 200");
+            ui.print("Party Impulse");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::PartyImpulse(Default::default()).price_lookup()
+            ));
         });
 
         ui.offset(Point::new(0, 1));
         ui.rect(15, 6, |ui| {
             ui.offset(Point::new(1, 1));
             ui.print("Economic Crash");
-            ui.print("Cost: 800");
+            ui.print(format!(
+                "Cost: {}",
+                PlayerCommand::EconomicCrash.price_lookup()
+            ));
 
             if ui.clicked() {
                 self.command_handle.send(PlayerCommand::EconomicCrash);
