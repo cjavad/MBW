@@ -8,6 +8,7 @@ use bracket_lib::prelude::*;
 use std::collections::HashMap;
 
 pub struct State {
+    pub side: bool,
     pub width: usize,
     pub height: usize,
     pub world: World,
@@ -19,6 +20,7 @@ pub struct State {
 impl State {
     pub fn new(handle: ClientNetworkHandle) -> Self {
         Self {
+            side: true,
             width: crate::MAP_WIDTH_CHUNKS * 6,
             height: crate::MAP_HEIGHT_CHUNKS * 6,
             world: World::empty(crate::MAP_WIDTH_CHUNKS, crate::MAP_HEIGHT_CHUNKS),
@@ -67,6 +69,10 @@ impl State {
             }
         }
     }
+
+    pub fn virus_ui(&mut self, ui: &mut Ui) {
+
+    }
 }
 
 impl GameState for State {
@@ -87,22 +93,27 @@ impl GameState for State {
             },
         );
 
-        if ui.mouse_click && self.selected_person.is_none() {
-            if let Some(persons) = self.person_locations.get(&Position::new(
-                ctx.mouse_point().x as usize,
-                ctx.mouse_point().y as usize,
-            )) {
-                self.selected_person = Some(persons[0].clone());
-            }
+        if self.side {
+            self.virus_ui(&mut ui);
+        } else {
+            
         }
 
         let selected_person = &mut self.selected_person;
         let world = &self.world;
 
-        if let Some(id) = selected_person {
-            let person = self.world.people.get(id).unwrap();
+        if selected_person.is_some() {
+            let person = self
+                .world
+                .people
+                .get(selected_person.as_ref().unwrap())
+                .unwrap();
 
             ui.rect(25, 30, |ui| {
+                if ui.mouse_click && !ui.clicked() {
+                    *selected_person = None;
+                }
+
                 ui.print("Person: ");
                 ui.offset(Point::new(1, 1));
                 ui.print(format!("Name: {} {}", person.first_name, person.last_name));
@@ -135,12 +146,21 @@ impl GameState for State {
                         ),
                         |ui| {
                             if ui.clicked() {
-                                *id = aq.clone();
+                                *selected_person = Some(aq.clone());
                             }
                         },
                     );
                 }
             });
+        }
+
+        if ui.mouse_click && self.selected_person.is_none() {
+            if let Some(persons) = self.person_locations.get(&Position::new(
+                ctx.mouse_point().x as usize,
+                ctx.mouse_point().y as usize,
+            )) {
+                self.selected_person = Some(persons[0].clone());
+            }
         }
 
         let mut ctx = DrawContext { bterm: ctx };

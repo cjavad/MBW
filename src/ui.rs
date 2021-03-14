@@ -94,6 +94,10 @@ impl Ui {
         }
     }
 
+    pub fn set_offset(&mut self, offset: Point) {
+        self.offset = offset;
+    }
+
     pub fn offset(&mut self, offset: Point) {
         self.offset = self.offset + offset;
     }

@@ -157,7 +157,12 @@ impl Person {
                 let work_hours = self.job.ty.work_hours();
 
                 if let Some(job_location) = &self.job.location {
-                    if world.time.hours >= work_hours.start && world.time.hours < work_hours.end {
+                    // leave when lob starts
+                    if world.time.hours >= work_hours.start
+                        && world.time.hours < work_hours.end
+                        // add some random chance, so everyone doesn't leave at excatly the same time
+                        && rng.gen_range(0..10) == 0
+                    {
                         let path = path_cache.get_path(
                             &world.map,
                             self.position.clone(),
@@ -195,7 +200,8 @@ impl Person {
             PersonAction::Working => {
                 let work_hours = self.job.ty.work_hours();
 
-                if world.time.hours >= work_hours.end {
+                // add some random chance, so everyone doesn't leave at excatly the same time
+                if world.time.hours >= work_hours.end && rng.gen_range(0..10) == 0 {
                     let path =
                         path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
 

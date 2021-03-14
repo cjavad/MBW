@@ -272,7 +272,7 @@ pub enum PlayerCommand {
     Testcenter(Position),
     Lockdown,
     Vaccinecenter(Position),
-    MaskCampaign(Position)
+    MaskCampaign(Position),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -280,7 +280,6 @@ pub struct PlayerUpdate {
     side: bool,
     command: PlayerCommand,
 }
-
 
 impl PlayerUpdate {
     pub fn is_valid(&self) -> bool {
@@ -294,7 +293,7 @@ impl PlayerUpdate {
             PlayerCommand::Lockdown => self.side == false,
             PlayerCommand::Vaccinecenter(Position) => self.side == false,
             PlayerCommand::MaskCampaign(Position) => self.side == false,
-            _ => false
+            _ => false,
         }
     }
 
@@ -309,7 +308,7 @@ impl PlayerUpdate {
             PlayerCommand::Lockdown => None,
             PlayerCommand::Vaccinecenter(Position) => Some(Tile::Empty),
             PlayerCommand::MaskCampaign(Position) => Some(Tile::Empty),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -317,7 +316,7 @@ impl PlayerUpdate {
 async fn server_listener(
     sender: Sender<PlayerUpdate>,
     mut read: OwnedReadHalf,
-    side: bool
+    side: bool,
 ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
     loop {
         let mut header = [0; 4];
