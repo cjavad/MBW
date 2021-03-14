@@ -175,6 +175,11 @@ impl World {
                 _ => unreachable!(),
             };
 
+            let location = Position::new(
+                location.x + offset.x as usize,
+                location.y + offset.y as usize,
+            );
+
             match persons.len() {
                 1 => ctx.print_color(location.x, location.y, color, BLACK, "&"),
                 n if n <= 9 => ctx.print_color(location.x, location.y, color, BLACK, n),

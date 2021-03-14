@@ -11,8 +11,8 @@ impl DrawUi for UiRect {
         ctx.bterm.draw_box(
             self.rect.position.x,
             self.rect.position.y,
-            self.rect.width,
-            self.rect.height,
+            self.rect.width - 1,
+            self.rect.height - 1,
             GREEN,
             DARK_GREEN,
         );

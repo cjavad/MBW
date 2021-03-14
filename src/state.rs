@@ -62,8 +62,7 @@ impl State {
                         }
                         PersonUpdate::Infected(id, is_infected) => {
                             self.world.people.get_mut(&id).unwrap().infected = is_infected;
-                        },
-
+                        }
                     },
                     StateUpdate::SetSide(side) => self.side = side,
                     StateUpdate::SetWorld(new_world) => self.world = new_world,
@@ -73,7 +72,35 @@ impl State {
     }
 
     pub fn virus_ui(&mut self, ui: &mut Ui) {
+        ui.offset(Point::new(1, 1));
 
+        ui.print(format!(
+            "Time: {:.2}:{:.2}:{:.2}",
+            self.world.time.days, self.world.time.hours, self.world.time.minutes
+        ));
+
+        ui.offset(Point::new(0, 1));
+
+        ui.print("VIRUS:");
+        ui.print(" Your job is to");
+        ui.print(" infect the city.");
+
+        ui.offset(Point::new(0, 1));
+        ui.print("Abilities:");
+
+        ui.offset(Point::new(1, 1));
+        ui.rect(15, 6, |ui| {
+            ui.offset(Point::new(1, 1));
+            ui.print("Barricade");
+            ui.print("Cost: 60");
+        });
+
+        ui.offset(Point::new(0, 1));
+        ui.rect(15, 6, |ui| {
+            ui.offset(Point::new(1, 1));
+            ui.print("Party");
+            ui.print("Cost: 200");
+        });
     }
 }
 
@@ -84,7 +111,7 @@ impl GameState for State {
         self.handle_payloads();
         self.update_person_locations();
         self.world
-            .render(ctx, &self.person_locations, Point::new(0, 0));
+            .render(ctx, &self.person_locations, Point::new(30, 0));
 
         let mut ui = Ui::new(
             ctx,
@@ -95,11 +122,14 @@ impl GameState for State {
             },
         );
 
-        if self.side {
-            self.virus_ui(&mut ui);
-        } else {
-            
-        }
+        ui.rect(30, self.height as i32, |ui| {
+            if self.side {
+                self.virus_ui(ui);
+            } else {
+            }
+        });
+
+        ui.set_offset(Point::new(30, 0));
 
         let selected_person = &mut self.selected_person;
         let world = &self.world;
@@ -156,9 +186,9 @@ impl GameState for State {
             });
         }
 
-        if ui.mouse_click && self.selected_person.is_none() {
+        if ui.mouse_click && self.selected_person.is_none() && ctx.mouse_point().x >= 30 {
             if let Some(persons) = self.person_locations.get(&Position::new(
-                ctx.mouse_point().x as usize,
+                ctx.mouse_point().x as usize - 30,
                 ctx.mouse_point().y as usize,
             )) {
                 self.selected_person = Some(persons[0].clone());
