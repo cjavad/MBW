@@ -502,6 +502,28 @@ impl GameSession {
         });
         self.send_playload(updates).await.unwrap();
     }
+
+    pub fn is_game_over_and_who_won(&self) -> Option<bool> {
+        let mut all_total = 0;
+        let mut all_infected = 0;
+
+        for (_id, person) in &self.world.people {
+            all_total += 1;
+            if person.infected {
+                all_infected += 1;
+            }
+        }
+
+        if self.world.time.days > 3 {
+            if all_total as f32 / all_infected as f32 >= 2.0 {
+                Some(true)
+            } else {
+                Some(false)
+            }
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -741,6 +763,18 @@ async fn server_run_game(
 
         let updates = session.update(&mut rng).await;
         session.send_playload(updates).await?;
+
+        match session.is_game_over_and_who_won() {
+            Some(false) => {
+                println!("President won!");
+                panic!()
+            }
+            Some(true) => {
+                println!("Virus won!");
+                panic!()
+            }
+            _ => {}
+        }
     }
 
     //Ok((player1, player2))
