@@ -223,9 +223,158 @@ impl GameSession {
     }
 
     pub async fn handle_players(&mut self) {
+        let mut updates = Vec::new();
+        let world = &mut self.world;
+        let people_actions = &mut self.people_actions;
+        let path_cache = &mut self.path_cache;
         self.receiver.try_iter().for_each(|update| {
-            println!("{:?}", update);
+            if update.is_valid() {
+                match &update.command {
+                    PlayerCommand::PartyImpulse(id) => {
+                        let person = world.people.get(&id).unwrap();
+                        let action = people_actions.get_mut(&id).unwrap();
+                        let path = path_cache.get_path(
+                            &world.map,
+                            person.position.clone(),
+                            person.home.clone(),
+                        );
+                        *action = PersonAction::Walking(
+                            path.clone(),
+                            Box::new(PersonAction::Partying(300)),
+                        );
+
+                        for id in &person.habits.acquaintances {
+                            let acquaintance = world.people.get(&id).unwrap();
+                            let action = people_actions.get_mut(&id).unwrap();
+                            let path = path_cache.get_path(
+                                &world.map,
+                                acquaintance.position.clone(),
+                                person.home.clone(),
+                            );
+                            *action = PersonAction::Walking(
+                                path.clone(),
+                                Box::new(PersonAction::Partying(300)),
+                            );
+                        }
+                    }
+                    PlayerCommand::AntivaxCampaign(position) => {
+                        if world.map.tiles[position.x][position.y]
+                            == update.command.tile_lookup().unwrap()
+                        {
+                            world.map.tiles[position.x][position.y] = Tile::AntivaxCampain(480);
+                            updates.push(StateUpdate::TileUpdate(
+                                position.clone(),
+                                world.map.tiles[position.x][position.y],
+                            ));
+                            path_cache.invalidate();
+                        }
+                    }
+                    PlayerCommand::Roadblock(position) => {
+                        if world.map.tiles[position.x][position.y]
+                            == update.command.tile_lookup().unwrap()
+                        {
+                            world.map.tiles[position.x][position.y] = Tile::RoadBlock;
+                            updates.push(StateUpdate::TileUpdate(
+                                position.clone(),
+                                world.map.tiles[position.x][position.y],
+                            ));
+                            path_cache.invalidate();
+                        }
+                    }
+                    PlayerCommand::SocialImpulse(position) => {
+                        if world.map.tiles[position.x][position.y]
+                            == update.command.tile_lookup().unwrap()
+                        {
+                            updates.push(StateUpdate::TileUpdate(
+                                position.clone(),
+                                world.map.tiles[position.x][position.y],
+                            ));
+                            path_cache.invalidate();
+                        }
+                    }
+                    PlayerCommand::EconomicCrash => {
+                        for x in 0..world.map.width {
+                            for y in 0..world.map.height {
+                                let tile = &mut world.map.tiles[x][y];
+                                match tile {
+                                    Tile::MaskCampain(_) => {
+                                        *tile = Tile::Empty;
+                                        updates.push(StateUpdate::TileUpdate(
+                                            Position { x, y },
+                                            tile.clone(),
+                                        ));
+                                    }
+                                    Tile::TestCenter => {
+                                        *tile = Tile::Door(None);
+                                        updates.push(StateUpdate::TileUpdate(
+                                            Position { x, y },
+                                            tile.clone(),
+                                        ));
+                                    }
+                                    Tile::AntivaxCampain(_) => {
+                                        *tile = Tile::Empty;
+                                        updates.push(StateUpdate::TileUpdate(
+                                            Position { x, y },
+                                            tile.clone(),
+                                        ));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                    PlayerCommand::Testcenter(position) => {
+                        if world.map.tiles[position.x][position.y]
+                            == update.command.tile_lookup().unwrap()
+                        {
+                            world.map.tiles[position.x][position.y] = Tile::TestCenter;
+                            updates.push(StateUpdate::TileUpdate(
+                                position.clone(),
+                                world.map.tiles[position.x][position.y],
+                            ));
+                            path_cache.invalidate();
+                        }
+                    }
+                    PlayerCommand::Lockdown(position) => {
+                        if world.map.tiles[position.x][position.y]
+                            == update.command.tile_lookup().unwrap()
+                        {
+                            world.map.tiles[position.x][position.y] = Tile::Door(Some(1440));
+                            updates.push(StateUpdate::TileUpdate(
+                                position.clone(),
+                                world.map.tiles[position.x][position.y],
+                            ));
+                            path_cache.invalidate();
+                        }
+                    }
+                    PlayerCommand::Vaccinecenter(position) => {
+                        if world.map.tiles[position.x][position.y]
+                            == update.command.tile_lookup().unwrap()
+                        {
+                            world.map.tiles[position.x][position.y] = Tile::VaccineCenter;
+                            updates.push(StateUpdate::TileUpdate(
+                                position.clone(),
+                                world.map.tiles[position.x][position.y],
+                            ));
+                            path_cache.invalidate();
+                        }
+                    }
+                    PlayerCommand::MaskCampaign(position) => {
+                        if world.map.tiles[position.x][position.y]
+                            == update.command.tile_lookup().unwrap()
+                        {
+                            world.map.tiles[position.x][position.y] = Tile::MaskCampain(480);
+                            updates.push(StateUpdate::TileUpdate(
+                                position.clone(),
+                                world.map.tiles[position.x][position.y],
+                            ));
+                            path_cache.invalidate();
+                        }
+                    }
+                }
+            }
         });
+        self.send_playload(updates).await.unwrap();
     }
 }
 
@@ -249,6 +398,7 @@ impl PlayerSession {
 pub enum StateUpdate {
     SetWorld(World),
     SetSide(bool),
+    TileUpdate(Position, Tile),
     PersonUpdate(PersonUpdate),
 }
 
@@ -283,7 +433,7 @@ impl NetworkPayload {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PlayerCommand {
-    PartyImpulse(Position), // Placing a party impulse makes all the people connected to it (employes and acquaintances) come together
+    PartyImpulse(PersonId), // Placing a party impulse makes all the people connected to it (employes and acquaintances) come together
     AntivaxCampaign(Position), // Sets Person.vaccine to -1 (no more vaccines) and lowers Person.habits.mask to 0
     Roadblock(Position), // Disable routes to test centers or any other place for that matter (at position)
     SocialImpulse(Position), // Creates hotspot at Position people will flock about, increases habits.acquaintances

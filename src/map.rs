@@ -13,7 +13,7 @@ impl Position {
     }
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Tile {
     Empty,
     Building,
