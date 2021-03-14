@@ -179,14 +179,28 @@ impl World {
                 .sum::<f32>()
                 / persons.len() as f32;
 
+            let tested = persons
+                .iter()
+                .map(|p| self.people[p].tested as i32 as f32)
+                .sum::<f32>()
+                / persons.len() as f32;
+
             let vaccinated = persons
                 .iter()
                 .map(|p| self.people[p].vaccinated as i32 as f32)
                 .sum::<f32>()
                 / persons.len() as f32;
 
-            let vaccinated_color = match vaccinated {
+            let tested_color = match tested {
                 n if n == 0.0 => LIGHT_BLUE,
+                n if n < 0.5 => DARK_GREEN,
+                n if n < 1.0 => GREEN,
+                n if n == 1.0 => GREEN2,
+                _ => unreachable!(),
+            };
+
+            let vaccinated_color = match vaccinated {
+                n if n == 0.0 => tested_color,
                 n if n < 0.5 => BLUE2,
                 n if n < 1.0 => BLUE,
                 n if n == 1.0 => DARK_BLUE,
