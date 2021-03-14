@@ -34,7 +34,7 @@ pub enum PersonUpdate {
     Infected(PersonId, bool),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PersonId(pub u32);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -43,6 +43,7 @@ pub enum PersonAction {
     Walking(Vec<Position>, Box<PersonAction>),
     Shopping(u32),
     AtHome,
+    Partying(u32),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -219,19 +220,26 @@ impl Person {
                     *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
                 }
             }
+            PersonAction::Partying(time) => {
+                *time -= 1;
+                if *time == 0 {
+                    let path =
+                        path_cache.get_path(&world.map, self.position.clone(), self.home.clone());
+
+                    *action = PersonAction::Walking(path.clone(), Box::new(PersonAction::AtHome));
+                }
+            }
         }
     }
 
     pub fn update(&mut self, id: PersonId, action: &mut PersonAction) -> Option<PersonUpdate> {
         match action {
-            PersonAction::AtHome => None,
             PersonAction::Walking(path, _) => {
                 self.position = path.pop().unwrap();
 
                 Some(PersonUpdate::Position(id, self.position.clone()))
             }
-            PersonAction::Working => None,
-            PersonAction::Shopping(_) => None,
+            _ => None,
         }
     }
 }

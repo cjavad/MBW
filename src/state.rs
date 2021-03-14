@@ -69,6 +69,9 @@ impl State {
                             self.world.people.get_mut(&id).unwrap().alive = is_alive;
                         }
                     },
+                    StateUpdate::TileUpdate(position, tile) => {
+                        self.world.map.tiles[position.x][position.y] = tile;
+                    }
                     StateUpdate::SetSide(side) => self.side = side,
                     StateUpdate::SetWorld(new_world) => self.world = new_world,
                 }
