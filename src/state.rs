@@ -1,7 +1,7 @@
 use crate::client::ClientNetworkHandle;
 use crate::map::Position;
 use crate::person::{PersonId, PersonUpdate};
-use crate::server::WorldUpdate;
+use crate::server::StateUpdate;
 use crate::ui::{DrawContext, DrawUi, Rect, Ui};
 use crate::world::World;
 use bracket_lib::prelude::*;
@@ -56,15 +56,17 @@ impl State {
                 // TODO: maybe switch to more broad update type that PersonUpdate
 
                 match update {
-                    WorldUpdate::PersonUpdate(person_update) => match person_update {
+                    StateUpdate::PersonUpdate(person_update) => match person_update {
                         PersonUpdate::Position(id, new_position) => {
                             self.world.people.get_mut(&id).unwrap().position = new_position;
                         }
                         PersonUpdate::Infected(id, is_infected) => {
                             self.world.people.get_mut(&id).unwrap().infected = is_infected;
-                        }
+                        },
+
                     },
-                    WorldUpdate::SetWorld(new_world) => self.world = new_world,
+                    StateUpdate::SetSide(side) => self.side = side,
+                    StateUpdate::SetWorld(new_world) => self.world = new_world,
                 }
             }
         }
