@@ -57,6 +57,7 @@ pub struct PersonHabits {
 pub struct Person {
     pub alive: bool,
     pub infected: bool,
+    pub tick_infected: u64,
     pub tick_last_touched: u64,
     pub vaccinated: bool,
     pub first_name: String,
@@ -120,6 +121,7 @@ impl Person {
             alive: true,
             infected: false,
             vaccinated: false,
+            tick_infected: 0,
             tick_last_touched: 0,
             first_name: FIRST_NAMES.choose(rng).unwrap().to_string(),
             last_name: LAST_NAMES.choose(rng).unwrap().to_string(),

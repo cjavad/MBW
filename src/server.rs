@@ -96,7 +96,7 @@ pub struct GameSession {
 impl GameSession {
     pub async fn send_playload(
         &mut self,
-        updates: Vec<WorldUpdate>,
+        updates: Vec<StateUpdate>,
     ) -> Result<(), Box<dyn std::error::Error + 'static + Send + Sync>> {
         // Create payload
         let network_payload = NetworkPayload::create(&self, updates);
@@ -111,7 +111,7 @@ impl GameSession {
         Ok(())
     }
 
-    pub async fn update(&mut self, rng: &mut impl Rng) -> Vec<WorldUpdate> {
+    pub async fn update(&mut self, rng: &mut impl Rng) -> Vec<StateUpdate> {
         self.world.time.set_minutes(self.tick_count as u32);
 
         self.handle_players().await;
@@ -176,7 +176,8 @@ impl GameSession {
 
                     if other_person.infected && infection_chance > rng.gen_range(0.0..100.0) {
                         person.infected = true;
-                        updates.push(WorldUpdate::PersonUpdate(PersonUpdate::Infected(
+                        person.tick_infected = self.tick_count;
+                        updates.push(StateUpdate::PersonUpdate(PersonUpdate::Infected(
                             id.clone(),
                             person.infected,
                         )));
@@ -196,7 +197,7 @@ impl GameSession {
             let action = self.people_actions.get_mut(id).unwrap();
 
             match person.update(id.clone(), action) {
-                Some(u) => updates.push(WorldUpdate::PersonUpdate(u)),
+                Some(u) => updates.push(StateUpdate::PersonUpdate(u)),
                 None => {}
             }
         }
@@ -228,8 +229,9 @@ impl PlayerSession {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum WorldUpdate {
+pub enum StateUpdate {
     SetWorld(World),
+    SetSide(bool),
     PersonUpdate(PersonUpdate),
 }
 
@@ -244,11 +246,11 @@ pub struct NetworkPayload {
     /// Server tickrate
     pub tick_rate: u8,
     /// Vector for PersonUpdate(s)
-    pub updates: Vec<WorldUpdate>,
+    pub updates: Vec<StateUpdate>,
 }
 
 impl NetworkPayload {
-    pub fn create(session: &GameSession, updates: Vec<WorldUpdate>) -> Self {
+    pub fn create(session: &GameSession, updates: Vec<StateUpdate>) -> Self {
         NetworkPayload {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -379,7 +381,7 @@ async fn server_run_game(
     };
 
     session
-        .send_playload(vec![WorldUpdate::SetWorld(session.world.clone())])
+        .send_playload(vec![StateUpdate::SetWorld(session.world.clone())])
         .await?;
 
     loop {

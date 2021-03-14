@@ -70,7 +70,7 @@ Roadblock: Blokere paths
 
 Social impulses: mennesker samles i dette område efter arbejde
 
-Økonomisk crash: Folk går ikke på arbejde 
+Økonomisk crash: Folk går ikke på arbejde
 
 ### Player 2: læge something player
 
@@ -78,7 +78,7 @@ Testcenter: Npcer der går forbi et område vil blive testet, positive tilfælde
 
 Nedlukning: stop procentdel af npcer fra at bevæge sig ud fra deres hjem
 
-Lokal nedlukning: Bloker npcer fra at gå igennem et område, 
+Lokal nedlukning: Bloker npcer fra at gå igennem et område
 
 Vaccinecenter: Gør npcer immune overfor infektion, har lav radius/duration
 
