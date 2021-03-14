@@ -294,11 +294,6 @@ pub enum PlayerCommand {
     MaskCampaign(Position), // Sets Person.habits.mask to 1 when person passses positions
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PlayerUpdate {
-    side: bool,
-    command: PlayerCommand,
-}
 
 impl PlayerCommand {
     pub fn is_valid(&self, side: bool) -> bool {
@@ -342,6 +337,18 @@ impl PlayerCommand {
             PlayerCommand::Vaccinecenter(_) => 1200,
             PlayerCommand::MaskCampaign(_) => 400,
         }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PlayerUpdate {
+    side: bool,
+    command: PlayerCommand,
+}
+
+impl PlayerUpdate {
+    pub fn is_valid(&self) -> bool {
+        self.command.is_valid(self.side)
     }
 }
 
