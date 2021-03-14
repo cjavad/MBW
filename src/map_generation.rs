@@ -3,7 +3,8 @@
 //! * Place [`Structure`]s randomly until no more can be placed.
 //! * Generate tiles from those structures.
 
-use crate::map;
+use crate::map::{self, Tile};
+use crate::world::Location;
 use rand::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -39,7 +40,8 @@ pub struct MapGenerationSettings<'a> {
 impl<'a> MapGenerationSettings<'a> {
     /// Generates the map.
     pub fn generate(&self, rng: &mut impl Rng) -> map::Map {
-        let mut chunks: Vec<Vec<Option<&Chunk>>> = vec![vec![None; self.height]; self.width];
+        let mut chunks: Vec<Vec<Option<(&Chunk, Location)>>> =
+            vec![vec![None; self.height]; self.width];
 
         // because hardcoding is okay if behind atleast 2 levels of indirection
         const MAX_TRIES: u32 = 10;
@@ -63,8 +65,10 @@ impl<'a> MapGenerationSettings<'a> {
 
             // if can place, then do so
             if can_place {
+                let location = Location::generate(rng);
+
                 for (p, chunk) in structure.chunks {
-                    chunks[x + p.x][y + p.y] = Some(chunk);
+                    chunks[x + p.x][y + p.y] = Some((chunk, location.clone()));
                 }
 
                 times_tried = 0;
@@ -82,10 +86,18 @@ impl<'a> MapGenerationSettings<'a> {
         // replace tiles with the generated ones
         for column in 0..self.width {
             for row in 0..self.height {
-                if let Some(chunk) = chunks[column][row] {
+                if let Some((chunk, location)) = chunks[column][row].clone() {
+                    let color = location.color();
+
                     for x in 0..6 {
                         for y in 0..6 {
                             map.tiles[column * 6 + x][row * 6 + y] = chunk.tiles[x][y].clone();
+
+                            match &mut map.tiles[column * 6 + x][row * 6 + y] {
+                                Tile::Building(bcolor) => *bcolor = color.clone(),
+                                Tile::Door(blocation, _) => *blocation = location.clone(),
+                                _ => {}
+                            }
                         }
                     }
                 }

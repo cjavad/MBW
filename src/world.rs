@@ -6,7 +6,7 @@ use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Location {
     Home,
     Job(person::JobType),
@@ -18,6 +18,13 @@ impl Location {
             0 => Location::Home,
             1 => Location::Job(person::JobType::generate(rng)),
             _ => unreachable!(),
+        }
+    }
+
+    pub fn color(&self) -> &(u8, u8, u8) {
+        match self {
+            Location::Home => &DARKOLIVEGREEN4,
+            Location::Job(_) => &BURLYWOOD,
         }
     }
 }
@@ -85,7 +92,10 @@ impl World {
             .map(|(x, c)| c.iter().enumerate().map(move |(y, t)| (x.clone(), y, t)))
             .flatten()
             .filter_map(|(x, y, t)| match t {
-                Tile::Door(_) => Some((Position::new(x, y), Location::generate(rng))),
+                Tile::Door(location, _) => {
+                    println!("{:?}", location);
+                    Some((Position::new(x, y), location.clone()))
+                }
                 _ => None,
             })
             .collect::<HashMap<_, _>>();
@@ -103,7 +113,6 @@ impl World {
                         .push(position.clone());
                     None
                 }
-                _ => None,
             })
             .collect::<HashMap<_, _>>();
 

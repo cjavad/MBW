@@ -1,7 +1,7 @@
 use crate::map::{Map, Position, Tile};
 use crate::map_generation::MapGenerationSettings;
 use crate::person::{Person, PersonAction, PersonId, PersonUpdate};
-use crate::world::World;
+use crate::world::{Location, World};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -335,7 +335,7 @@ impl GameSession {
                             world.map.tiles[position.x][position.y] = Tile::AntivaxCampain(480);
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
-                                world.map.tiles[position.x][position.y],
+                                world.map.tiles[position.x][position.y].clone(),
                             ));
                             path_cache.invalidate();
                         }
@@ -349,7 +349,7 @@ impl GameSession {
                             world.map.tiles[position.x][position.y] = Tile::RoadBlock;
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
-                                world.map.tiles[position.x][position.y],
+                                world.map.tiles[position.x][position.y].clone(),
                             ));
                             path_cache.invalidate();
                         } else if world.map.tiles[position.x][position.y]
@@ -360,7 +360,7 @@ impl GameSession {
                             world.map.tiles[position.x][position.y] = Tile::Empty;
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
-                                world.map.tiles[position.x][position.y],
+                                world.map.tiles[position.x][position.y].clone(),
                             ));
                             path_cache.invalidate();
                         }
@@ -373,7 +373,7 @@ impl GameSession {
 
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
-                                world.map.tiles[position.x][position.y],
+                                world.map.tiles[position.x][position.y].clone(),
                             ));
                             path_cache.invalidate();
                         }
@@ -422,7 +422,7 @@ impl GameSession {
                             world.map.tiles[position.x][position.y] = Tile::TestCenter;
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
-                                world.map.tiles[position.x][position.y],
+                                world.map.tiles[position.x][position.y].clone(),
                             ));
                             test_centers.insert(position.clone());
                         }
@@ -460,10 +460,14 @@ impl GameSession {
                                 }
                             }
 
-                            world.map.tiles[position.x][position.y] = Tile::Door(Some(1440));
+                            match &mut world.map.tiles[position.x][position.y] {
+                                Tile::Door(_, lockdown) => *lockdown = Some(1440),
+                                _ => {}
+                            }
+
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
-                                world.map.tiles[position.x][position.y],
+                                world.map.tiles[position.x][position.y].clone(),
                             ));
                             path_cache.invalidate();
                         }
@@ -477,7 +481,7 @@ impl GameSession {
                             world.map.tiles[position.x][position.y] = Tile::VaccineCenter;
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
-                                world.map.tiles[position.x][position.y],
+                                world.map.tiles[position.x][position.y].clone(),
                             ));
 
                             vaccine_centers.insert(position.clone());
@@ -492,7 +496,7 @@ impl GameSession {
                             world.map.tiles[position.x][position.y] = Tile::MaskCampain(480);
                             updates.push(StateUpdate::TileUpdate(
                                 position.clone(),
-                                world.map.tiles[position.x][position.y],
+                                world.map.tiles[position.x][position.y].clone(),
                             ));
                             path_cache.invalidate();
                         }
@@ -611,7 +615,7 @@ impl PlayerCommand {
             PlayerCommand::SocialImpulse(_) => &[Tile::Empty],
             PlayerCommand::EconomicCrash => &[],
             PlayerCommand::Testcenter(_) => &[Tile::Empty],
-            PlayerCommand::Lockdown(_) => &[Tile::Door(None)],
+            PlayerCommand::Lockdown(_) => &[Tile::Door(Location::Home, None)],
             PlayerCommand::Vaccinecenter(_) => &[Tile::Empty],
             PlayerCommand::MaskCampaign(_) => &[Tile::Empty],
         }
@@ -621,7 +625,13 @@ impl PlayerCommand {
         match self {
             PlayerCommand::PartyImpulse(_) => 250,
             PlayerCommand::AntivaxCampaign(_) => 800,
-            PlayerCommand::Roadblock(_) => if side { 150 } else { 80 },
+            PlayerCommand::Roadblock(_) => {
+                if side {
+                    150
+                } else {
+                    80
+                }
+            }
             PlayerCommand::SocialImpulse(_) => 180,
             PlayerCommand::EconomicCrash => 800,
             PlayerCommand::Testcenter(_) => 300,

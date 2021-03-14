@@ -1,3 +1,4 @@
+use crate::world::Location;
 use bracket_lib::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -13,11 +14,11 @@ impl Position {
     }
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Tile {
     Empty,
-    Building,
-    Door(Option<u32>),
+    Building((u8, u8, u8)),
+    Door(Location, Option<u32>),
     RoadBlock,
     TestCenter,
     VaccineCenter,
@@ -29,8 +30,8 @@ impl Tile {
     pub fn render(&self, point: &Point, ctx: &mut BTerm) {
         match self {
             Tile::Empty => {}
-            Tile::Building => ctx.print_color(point.x, point.y, DARKOLIVEGREEN4, BLACK, "#"),
-            Tile::Door(lockdown) => ctx.print_color(point.x, point.y, BURLYWOOD, BLACK, "["),
+            Tile::Building(color) => ctx.print_color(point.x, point.y, *color, BLACK, "#"),
+            Tile::Door(_, lockdown) => ctx.print_color(point.x, point.y, BURLYWOOD, BLACK, "["),
             Tile::RoadBlock => ctx.print_color(point.x, point.y, GRAY, BLACK, "X"),
             Tile::TestCenter => ctx.print_color(point.x, point.y, PURPLE, BLACK, "T"),
             Tile::VaccineCenter => ctx.print_color(point.x, point.y, GREEN, BLACK, "V"),
@@ -77,7 +78,7 @@ impl Map {
         if self.in_bounds(position) {
             match self.tiles[position.x][position.y] {
                 Tile::Empty => true,
-                Tile::Door(lockdown) => lockdown.is_none(),
+                Tile::Door(_, lockdown) => lockdown.is_none(),
                 Tile::TestCenter => true,
                 Tile::VaccineCenter => true,
                 _ => false,
